@@ -5,6 +5,8 @@
 #include <time.h>
 #include <sstream>
 #include <fstream>
+#include <glad/glad.h>
+#include <glfw-3.2.1/include/GLFW/glfw3.h>
 
 
 #define RESET "\033[0m"
@@ -83,8 +85,174 @@ bool top_correct(int cube[6][3][3]);
 
 void cheeky_ai(int cube[6][3][3], string r_scramble, ofstream& os, ifstream& is);
 
+void processInput(GLFWwindow *window);
+
+void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+
+// settings
+const unsigned int SCR_WIDTH = 800;
+const unsigned int SCR_HEIGHT = 600;
+
+const char *vertexShaderSource = "#version 330 core\n"
+"layout (location = 0) in vec3 aPos;\n"
+"void main()\n"
+"{\n"
+"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+"}\0";
+
+const char *fragmentShaderSource = "#version 330 core\n"
+"out vec4 FragColor;\n"
+"void main()\n"
+"{\n"
+"   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+"}\n\0";
+
 int main()
 {
+	/*
+	// glfw: initialize and configure
+	// ------------------------------
+	glfwInit();
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+
+	// glfw window creation
+	// --------------------
+	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+	if (window == NULL)
+	{
+		std::cout << "Failed to create GLFW window" << std::endl;
+		glfwTerminate();
+		return -1;
+	}
+	glfwMakeContextCurrent(window);
+	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+	// glad: load all OpenGL function pointers
+	// ---------------------------------------
+	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+	{
+		std::cout << "Failed to initialize GLAD" << std::endl;
+		return -1;
+	}
+
+
+	// build and compile our shader program
+	// ------------------------------------
+	// vertex shader
+	int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+	glCompileShader(vertexShader);
+	// check for shader compile errors
+	int success;
+	char infoLog[512];
+	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+	if (!success)
+	{
+		glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+		std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+	}
+	// fragment shader
+	int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+	glCompileShader(fragmentShader);
+	// check for shader compile errors
+	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+	if (!success)
+	{
+		glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+	}
+	// link shaders
+	int shaderProgram = glCreateProgram();
+	glAttachShader(shaderProgram, vertexShader);
+	glAttachShader(shaderProgram, fragmentShader);
+	glLinkProgram(shaderProgram);
+	// check for linking errors
+	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+	if (!success) {
+		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+		std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+	}
+	glDeleteShader(vertexShader);
+	glDeleteShader(fragmentShader);
+
+	// set up vertex data (and buffer(s)) and configure vertex attributes
+	// ------------------------------------------------------------------
+	float vertices[] = {
+		 0.5f,  0.5f, 0.0f,  // top right
+		 0.5f, -0.5f, 0.0f,  // bottom right
+		-0.5f, -0.5f, 0.0f,  // bottom left
+		-0.5f,  0.5f, 0.0f   // top left 
+	};
+	unsigned int indices[] = {  // note that we start from 0!
+		3, 1, 0,  // first Triangle
+		1, 2, 3   // second Triangle
+	};
+	unsigned int VBO, VAO, EBO;
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+	glGenBuffers(1, &EBO);
+	// bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
+	glBindVertexArray(VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	// note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	// remember: do NOT unbind the EBO while a VAO is active as the bound element buffer object IS stored in the VAO; keep the EBO bound.
+	//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	// You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
+	// VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
+	glBindVertexArray(0);
+
+
+	// uncomment this call to draw in wireframe polygons.
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+	// render loop
+	// -----------
+	while (!glfwWindowShouldClose(window))
+	{
+		// input
+		// -----
+		processInput(window);
+
+		// render
+		// ------
+		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		// draw our first triangle
+		glUseProgram(shaderProgram);
+		glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
+		//glDrawArrays(GL_TRIANGLES, 0, 6);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		// glBindVertexArray(0); // no need to unbind it every time 
+
+		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+		// -------------------------------------------------------------------------------
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+	}
+
+	// optional: de-allocate all resources once they've outlived their purpose:
+	// ------------------------------------------------------------------------
+	glDeleteVertexArrays(1, &VAO);
+	glDeleteBuffers(1, &VBO);
+	glDeleteBuffers(1, &EBO);
+	*/
 	int cube[6][3][3];
 	int count = 0, choice = 0;
 	ifstream is;
@@ -160,6 +328,24 @@ int main()
 			return 0;
 		}
 	} while (choice != 7);
+	//glfwTerminate();
+}
+
+// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
+// ---------------------------------------------------------------------------------------------------------
+void processInput(GLFWwindow *window)
+{
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, true);
+}
+
+// glfw: whenever the window size changed (by OS or user resize) this callback function executes
+// ---------------------------------------------------------------------------------------------
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+	// make sure the viewport matches the new window dimensions; note that width and 
+	// height will be significantly larger than specified on retina displays.
+	glViewport(0, 0, width, height);
 }
 
 void cheeky_ai(int cube[6][3][3], string r_scramble, ofstream& os, ifstream& is)
@@ -180,6 +366,7 @@ string check_color(int cube[6][3][3], int x, int y, int z)
 	else if (cube[x][y][z] >= 27 and cube[x][y][z] <= 35) return "green";
 	else if (cube[x][y][z] >= 36 and cube[x][y][z] <= 44) return "orange";
 	else if (cube[x][y][z] >= 45 and cube[x][y][z] <= 53) return "white";
+	return " ";
 }
 
 string check_color(int * ptr)
@@ -190,6 +377,7 @@ string check_color(int * ptr)
 	else if (*ptr >= 27 and *ptr <= 35) return "green";
 	else if (*ptr >= 36 and *ptr <= 44) return "orange";
 	else if (*ptr >= 45 and *ptr <= 53) return "white";
+	return " ";
 }
 
 static bool top_layer_right(int cube[6][3][3])
@@ -216,7 +404,7 @@ void solver(int cube[6][3][3])
 	//cross
 	//need to implement while loop to keep running function till the cross is made
 	//implement a thing that writes the moves the ai does to solve the cube to a file with sstream (ofstream)
-	int numRight = 0, numWrong = 0, counterr = 0;
+	int numRight = 0, numWrong = 0;
 	int num_solves = 200;
 	ofstream os;
 	for (int e = 0; e < num_solves; e++)
@@ -430,7 +618,7 @@ void pll(int cube[6][3][3])
 	//if top is z perm.  green or blue needs to be on [0][1] position on red face
 	//then u perm.  turn so block is on orange side uperm .  if not solved another u perm and auf.
 	//if no headlights just do t perm from any orientation
-	else if (check_color(&cube[2][0][0]) != check_color(&cube[2][0][2]) and
+	if (check_color(&cube[2][0][0]) != check_color(&cube[2][0][2]) and
 		check_color(&cube[3][0][0]) != check_color(&cube[3][0][2]) and
 		check_color(&cube[4][0][0]) != check_color(&cube[4][0][2]) and
 		check_color(&cube[1][0][0]) != check_color(&cube[1][0][2]))
@@ -454,8 +642,10 @@ void pll(int cube[6][3][3])
 	turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "Rp", true); turn_cube(cube, "F", true); turn_cube(cube, "R", true);
 	turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "Rp", true); turn_cube(cube, "Fp", true);
 	delay();
-	if (is_solved(cube))
+	if (is_solved(cube)) 
+	{
 		return;
+	}
 	else if (!is_solved(cube) and top_layer_right(cube))
 	{
 		auf(cube); if (is_solved(cube)) return;
@@ -548,7 +738,6 @@ void top_cross(int cube[6][3][3])
 
 bool second_layer_correct(int cube[6][3][3])
 {
-	int count;
 	if (check_color(&cube[1][1][0]) == "blue" and check_color(&cube[1][1][2]) == "blue" and
 		check_color(&cube[2][1][0]) == "red" and check_color(&cube[2][1][2]) == "red" and
 		check_color(&cube[3][1][0]) == "green" and check_color(&cube[3][1][2]) == "green" and
@@ -899,7 +1088,6 @@ static string opp(string a)
 
 string random_scramble(int cube[6][3][3], int scramble_size, ofstream& os)
 {
-	const int size = scramble_size;
 	string scramble = "", temp = "";
 	string reverse_scramble = "";
 	vector<string> vect2;

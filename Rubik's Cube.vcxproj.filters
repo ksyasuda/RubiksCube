@@ -23,7 +23,10 @@
     <ClCompile Include="..\..\Rubik%27s Cube\Rubik%27s Cube\pch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Rubik%27s Cube\Rubik%27s Cube\Rubik%27s Cube.cpp">
+    <ClCompile Include="RubiksCube.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\OpenGL\glad.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

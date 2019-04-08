@@ -92,10 +92,12 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>C:\Users\Shadow\Desktop\OpenGL;C:\Users\Shadow\Desktop\OpenGL\Includes;C:\Users\Shadow\Desktop\OpenGL\Libraries;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>opengl32.lib;C:\Users\Shadow\Desktop\OpenGL\Libraries\glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -155,6 +157,7 @@
     <ClInclude Include="..\..\Rubik%27s Cube\Rubik%27s Cube\pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\OpenGL\glad.c" />
     <ClCompile Include="..\..\Rubik%27s Cube\Rubik%27s Cube\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
