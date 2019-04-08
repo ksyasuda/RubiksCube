@@ -5,8 +5,7 @@
 #include <time.h>
 #include <sstream>
 #include <fstream>
-#include <glad/glad.h>
-#include <glfw-3.2.1/include/GLFW/glfw3.h>
+
 
 
 #define RESET "\033[0m"
@@ -18,7 +17,6 @@
 #define GREEN "\033[32m"
 #define ORANGE "\033[91m"
 
-using namespace std;
 using namespace std::chrono;
 
 void print(int cube[6][3][3]);
@@ -47,11 +45,11 @@ void B(int cube[6][3][3]);
 
 void Bp(int cube[6][3][3]);
 
-string random_scramble(int cube[6][3][3], int scramble_size, ofstream& os);
+std::string random_scramble(int cube[6][3][3], int scramble_size, std::ofstream& os);
 
-void load_scramble(int cube[6][3][3], ifstream& ins);
+void load_scramble(int cube[6][3][3], std::ifstream& ins);
 
-void turn_cube(int cube[6][3][3], string temp, bool yeah);
+void turn_cube(int cube[6][3][3], std::string temp, bool yeah);
 
 int menu(int choice);
 
@@ -59,7 +57,7 @@ bool is_solved(int cube[6][3][3]);
 
 void play(int cube[6][3][3]);
 
-bool valid_move(string move);
+bool valid_move(std::string move);
 
 void solver(int cube[6][3][3]);
 
@@ -75,7 +73,7 @@ bool second_layer_correct(int cube[6][3][3]);
 
 void top_cross(int cube[6][3][3]);
 
-string check_color(int * ptr);
+std::string check_color(int * ptr);
 
 void pll(int cube[6][3][3]);
 
@@ -83,181 +81,22 @@ void oll(int cube[6][3][3]);
 
 bool top_correct(int cube[6][3][3]);
 
-void cheeky_ai(int cube[6][3][3], string r_scramble, ofstream& os, ifstream& is);
+void cheeky_ai(int cube[6][3][3], std::string r_scramble, std::ofstream& os, std::ifstream& is);
 
-void processInput(GLFWwindow *window);
+void cube_with_pair(int cube[6][3][3])
+{
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+}
 
-// settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
-
-const char *vertexShaderSource = "#version 330 core\n"
-"layout (location = 0) in vec3 aPos;\n"
-"void main()\n"
-"{\n"
-"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-"}\0";
-
-const char *fragmentShaderSource = "#version 330 core\n"
-"out vec4 FragColor;\n"
-"void main()\n"
-"{\n"
-"   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-"}\n\0";
 
 int main()
 {
-	/*
-	// glfw: initialize and configure
-	// ------------------------------
-	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-
-	// glfw window creation
-	// --------------------
-	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
-	if (window == NULL)
-	{
-		std::cout << "Failed to create GLFW window" << std::endl;
-		glfwTerminate();
-		return -1;
-	}
-	glfwMakeContextCurrent(window);
-	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
-	// glad: load all OpenGL function pointers
-	// ---------------------------------------
-	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-	{
-		std::cout << "Failed to initialize GLAD" << std::endl;
-		return -1;
-	}
-
-
-	// build and compile our shader program
-	// ------------------------------------
-	// vertex shader
-	int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-	glCompileShader(vertexShader);
-	// check for shader compile errors
-	int success;
-	char infoLog[512];
-	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-	if (!success)
-	{
-		glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-	}
-	// fragment shader
-	int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-	glCompileShader(fragmentShader);
-	// check for shader compile errors
-	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-	if (!success)
-	{
-		glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-	}
-	// link shaders
-	int shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
-	glLinkProgram(shaderProgram);
-	// check for linking errors
-	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-	if (!success) {
-		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-	}
-	glDeleteShader(vertexShader);
-	glDeleteShader(fragmentShader);
-
-	// set up vertex data (and buffer(s)) and configure vertex attributes
-	// ------------------------------------------------------------------
-	float vertices[] = {
-		 0.5f,  0.5f, 0.0f,  // top right
-		 0.5f, -0.5f, 0.0f,  // bottom right
-		-0.5f, -0.5f, 0.0f,  // bottom left
-		-0.5f,  0.5f, 0.0f   // top left 
-	};
-	unsigned int indices[] = {  // note that we start from 0!
-		3, 1, 0,  // first Triangle
-		1, 2, 3   // second Triangle
-	};
-	unsigned int VBO, VAO, EBO;
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
-	// bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
-	glBindVertexArray(VAO);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-
-	// note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	// remember: do NOT unbind the EBO while a VAO is active as the bound element buffer object IS stored in the VAO; keep the EBO bound.
-	//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-	// You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
-	// VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
-	glBindVertexArray(0);
-
-
-	// uncomment this call to draw in wireframe polygons.
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-	// render loop
-	// -----------
-	while (!glfwWindowShouldClose(window))
-	{
-		// input
-		// -----
-		processInput(window);
-
-		// render
-		// ------
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		// draw our first triangle
-		glUseProgram(shaderProgram);
-		glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
-		//glDrawArrays(GL_TRIANGLES, 0, 6);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-		// glBindVertexArray(0); // no need to unbind it every time 
-
-		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-		// -------------------------------------------------------------------------------
-		glfwSwapBuffers(window);
-		glfwPollEvents();
-	}
-
-	// optional: de-allocate all resources once they've outlived their purpose:
-	// ------------------------------------------------------------------------
-	glDeleteVertexArrays(1, &VAO);
-	glDeleteBuffers(1, &VBO);
-	glDeleteBuffers(1, &EBO);
-	*/
 	int cube[6][3][3];
+	std::pair<std::string, int> p;
 	int count = 0, choice = 0;
-	ifstream is;
-	ofstream os;
-	string reverse_scramble = "";
+	std::ifstream is;
+	std::ofstream os;
+	std::string reverse_scramble = "";
 	for (int i = 0; i <= 5; i++)
 	{
 		for (int j = 0; j <= 2; j++)
@@ -276,8 +115,8 @@ int main()
 		int turns;
 		if (choice == 1)
 		{
-			cout << "How many turns in the scramble?: ";
-			cin >> turns;
+			std::cout << "How many turns in the scramble?: ";
+			std::cin >> turns;
 			reverse_scramble = random_scramble(cube, turns, os);
 			print(cube);
 		}
@@ -296,8 +135,8 @@ int main()
 			if (is_solved(cube))
 			{
 				auto end = high_resolution_clock::now();
-				cout << "The Cube has been Solved" << endl;
-				cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << endl;
+				std::cout << "The Cube has been Solved" << std::endl;
+				std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
 			}
 		}
 		//load custom solution
@@ -318,47 +157,29 @@ int main()
 			if (is_solved(cube))
 			{
 				auto end = high_resolution_clock::now();
-				cout << "The Cube has been Solved" << endl;
-				cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end-start).count() << " milliseconds)" << endl;
+				std::cout << "The Cube has been Solved" << std::endl;
+				std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end-start).count() << " milliseconds)" << std::endl;
 			}
 		}
 		else if (choice == 7)
 		{
-			cout << "Goodbye" << endl;
+			std::cout << "Goodbye" << std::endl;
 			return 0;
 		}
 	} while (choice != 7);
-	//glfwTerminate();
 }
 
-// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-// ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window)
+void cheeky_ai(int cube[6][3][3], std::string r_scramble, std::ofstream& os, std::ifstream& is)
 {
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, true);
-}
-
-// glfw: whenever the window size changed (by OS or user resize) this callback function executes
-// ---------------------------------------------------------------------------------------------
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-	// make sure the viewport matches the new window dimensions; note that width and 
-	// height will be significantly larger than specified on retina displays.
-	glViewport(0, 0, width, height);
-}
-
-void cheeky_ai(int cube[6][3][3], string r_scramble, ofstream& os, ifstream& is)
-{
-	string temp = "";
-	istringstream iss(r_scramble);
+	std::string temp = "";
+	std::istringstream iss(r_scramble);
 	while (iss >> temp)
 	{
 		turn_cube(cube, temp, true);
 	}
 }
 
-string check_color(int cube[6][3][3], int x, int y, int z)
+std::string check_color(int cube[6][3][3], int x, int y, int z)
 {
 	if (cube[x][y][z] >= 0 and cube[x][y][z] <= 8) return "yellow";
 	else if (cube[x][y][z] >= 9 and cube[x][y][z] <= 17) return "blue";
@@ -369,7 +190,7 @@ string check_color(int cube[6][3][3], int x, int y, int z)
 	return " ";
 }
 
-string check_color(int * ptr)
+std::string check_color(int * ptr)
 {
 	if (*ptr >= 0 and *ptr <= 8) return "yellow";
 	else if (*ptr >= 9 and *ptr <= 17) return "blue";
@@ -406,7 +227,7 @@ void solver(int cube[6][3][3])
 	//implement a thing that writes the moves the ai does to solve the cube to a file with sstream (ofstream)
 	int numRight = 0, numWrong = 0;
 	int num_solves = 200;
-	ofstream os;
+	std::ofstream os;
 	for (int e = 0; e < num_solves; e++)
 	{
 		random_scramble(cube, 25, os);
@@ -429,14 +250,14 @@ void solver(int cube[6][3][3])
 			auf(cube); 
 			if (is_solved(cube)) {
 				auto end = high_resolution_clock::now();
-				cout << "The Cube has been Solved" << endl;
-				cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds" << endl;
+				std::cout << "The Cube has been Solved" << std::endl;
+				std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds" << std::endl;
 				++numRight;
 				delay();
 				continue;
 			}
 			else
-				cout << "Literally no idea... this option should never output" << endl;
+				std::cout << "Literally no idea... this option should never output" << std::endl;
 		}
 		//split into two parts
 		//part one get headlights on f l and r faces and full bar on the b face
@@ -446,24 +267,24 @@ void solver(int cube[6][3][3])
 		if (top_layer_right(cube) and !is_solved(cube)) auf(cube);
 		if (is_solved(cube)) {
 			auto end = high_resolution_clock::now();
-			cout << "The Cube has been Solved" << endl;
-			cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end-start).count() << " milliseconds)" << endl;
+			std::cout << "The Cube has been Solved" << std::endl;
+			std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end-start).count() << " milliseconds)" << std::endl;
 			++numRight;
 			delay();
 		}
 		else
 		{
 			auto end = high_resolution_clock::now();
-			cout << "Not solved and idk what to do to solve it" << endl;
-			cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << endl;
+			std::cout << "Not solved and idk what to do to solve it" << std::endl;
+			std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
 			++numWrong;
 			delay();
 		}
 	}
-	cout << "Testing complete: " << num_solves << " solves" << endl;
-	cout << "Number of correct solves: " << numRight << endl;
-	cout << "Number of incorrect solves: " << numWrong << endl;
-	cout << "Percent corect = " << numRight << " / " << num_solves << " = " << (double)numRight / (double)num_solves;
+	std::cout << "Testing complete: " << num_solves << " solves" << std::endl;
+	std::cout << "Number of correct solves: " << numRight << std::endl;
+	std::cout << "Number of incorrect solves: " << numWrong << std::endl;
+	std::cout << "Percent corect = " << numRight << " / " << num_solves << " = " << (double)numRight / (double)num_solves;
 }
 
 bool top_correct(int cube[6][3][3])
@@ -964,26 +785,26 @@ void delay()
 
 void play(int cube[6][3][3])
 {
-	string move;
+	std::string move;
 	do 
 	{
-		cout << "Enter in your move or 'q' to quit: ";
-		cin >> move;
+		std::cout << "Enter in your move or 'q' to quit: ";
+		std::cin >> move;
 		while (move != "q" and move != "Q" and !valid_move(move))
 		{
-			cout << "Invalid move... try again" << endl;
-			cin >> move;
+			std::cout << "Invalid move... try again" << std::endl;
+			std::cin >> move;
 		}
 		turn_cube(cube, move, true);
 		if (is_solved(cube)) {
-			cout << "CONGRATS! NICE! AWESOME! 11/10 " << endl;
+			std::cout << "CONGRATS! NICE! AWESOME! 11/10 " << std::endl;
 			return;
 		}
 	} while (move != "Q" and move != "q");
 
 }
 
-bool valid_move(string move)
+bool valid_move(std::string move)
 {
 	if (move != "R" and move != "Rp" and move != "L" and move != "Lp" and
 		move != "U" and move != "Up" and move != "D" and move != "Dp" and
@@ -1014,24 +835,24 @@ bool is_solved(int cube[6][3][3])
 
 int menu(int choice)
 {
-	cout << "1. Randomly Scramble the Cube" << endl;
-	cout << "2. Solve the cube yourself" << endl;
-	cout << "3. Upload a custom scramble" << endl;
-	cout << "4. Load a custom solution " << endl;
-	cout << "5. Ai cube solve" << endl;
-	cout << "6. cheecky Ai cube solve" << endl;
-	cout << "7. Quit" << endl;
-	cout << "Enter in a choice: "; cin >> choice;
+	std::cout << "1. Randomly Scramble the Cube" << std::endl;
+	std::cout << "2. Solve the cube yourself" << std::endl;
+	std::cout << "3. Upload a custom scramble" << std::endl;
+	std::cout << "4. Load a custom solution " << std::endl;
+	std::cout << "5. Ai cube solve" << std::endl;
+	std::cout << "6. cheecky Ai cube solve" << std::endl;
+	std::cout << "7. Quit" << std::endl;
+	std::cout << "Enter in a choice: "; std::cin >> choice;
 	while (choice != 1 and choice != 2 and choice != 3 and choice != 4 and choice != 5 and choice != 6 and choice != 7) {
-		cout << "Invalid menu choice, try again" << endl;  
-		cout << "Enter in a choice: "; 
-		cin >> choice;
+		std::cout << "Invalid menu choice, try again" << std::endl;
+		std::cout << "Enter in a choice: ";
+		std::cin >> choice;
 	}
 	return choice;
 }
 
 
-void turn_cube(int cube[6][3][3], string temp, bool yea)
+void turn_cube(int cube[6][3][3], std::string temp, bool yea)
 {
 	if (temp == "R") R(cube);
 	else if (temp == "Rp") Rp(cube);
@@ -1045,21 +866,21 @@ void turn_cube(int cube[6][3][3], string temp, bool yea)
 	else if (temp == "Dp") Dp(cube);
 	else if (temp == "B") B(cube);
 	else if (temp == "Bp") Bp(cube);
-	cout << "One " << temp << " rotation" << endl;
+	std::cout << "One " << temp << " rotation" << std::endl;
 	if(yea) print(cube);
-	cout << endl;
+	std::cout << std::endl;
 }
 
-void load_scramble(int cube[6][3][3], ifstream& is)
+void load_scramble(int cube[6][3][3], std::ifstream& is)
 {
-	string filename = "", temp = "";
-	cout << "Enter in the filename: ";
-	cin >> filename;
+	std::string filename = "", temp = "";
+	std::cout << "Enter in the filename: ";
+	std::cin >> filename;
 	is.open(filename);
 	if (is.is_open()) 
 		is.clear();
 	if (is.fail()) {
-		cout << "Error loading file..." << endl;
+		std::cout << "Error loading file..." << std::endl;
 		return;
 	}
 	while (is >> temp)
@@ -1069,7 +890,7 @@ void load_scramble(int cube[6][3][3], ifstream& is)
 	is.close();
 }
 
-static string opp(string a)
+static std::string opp(std::string a)
 {
 	if (a == "R") return "Rp";
 	else if (a == "Rp") return "R";
@@ -1086,20 +907,20 @@ static string opp(string a)
 	else return "~";
 }
 
-string random_scramble(int cube[6][3][3], int scramble_size, ofstream& os)
+std::string random_scramble(int cube[6][3][3], int scramble_size, std::ofstream& os)
 {
-	string scramble = "", temp = "";
-	string reverse_scramble = "";
-	vector<string> vect2;
+	std::string scramble = "", temp = "";
+	std::string reverse_scramble = "";
+	std::vector<std::string> vect2;
 	os.open("test.txt");
 	if (os.is_open()) {
 		os.clear();
 	}
 	else {
-		cout << "Error opening file... test.txt" << endl;
+		std::cout << "Error opening file... test.txt" << std::endl;
 		return "~";
 	}
-	vector<string> vect = { "R", "Rp", "U", "Up", "L", "Lp", "F", "Fp", "D", "Dp", "B", "Bp" };
+	std::vector<std::string> vect = { "R", "Rp", "U", "Up", "L", "Lp", "F", "Fp", "D", "Dp", "B", "Bp" };
 	int random = 0;
 	srand(time(NULL));
 	for (int i = 0; i < scramble_size; i++)
@@ -1109,7 +930,7 @@ string random_scramble(int cube[6][3][3], int scramble_size, ofstream& os)
 		scramble += " ";
 		vect2.insert(vect2.begin(), opp(vect.at(random)));
 	}
-	istringstream iss(scramble);
+	std::istringstream iss(scramble);
 	while (iss >> temp)
 	{
 		turn_cube(cube, temp, false);
@@ -1117,8 +938,8 @@ string random_scramble(int cube[6][3][3], int scramble_size, ofstream& os)
 	}
 	os << "\n# of turns in scramble: " << scramble_size << "\n";
 	os.close();
-	vector<string>::iterator begin = vect2.begin();
-	vector<string>::iterator end = vect2.end();
+	std::vector<std::string>::iterator begin = vect2.begin();
+	std::vector<std::string>::iterator end = vect2.end();
 	os.open("reverse_scramble.txt");
 	int counter = 0;
 	if (os.is_open())
@@ -1132,7 +953,7 @@ string random_scramble(int cube[6][3][3], int scramble_size, ofstream& os)
 		++begin;
 	}
 	os.close();
-	cout << "# of turns in scramble: " << scramble_size << endl;
+	std::cout << "# of turns in scramble: " << scramble_size << std::endl;
 	return reverse_scramble;
 }
 
@@ -1446,7 +1267,7 @@ void print(int cube[6][3][3])
 	//YELLOW FACE
 	for (int i = 0; i <= 2; i++)
 	{
-		cout << "         ";
+		std::cout << "         ";
 		for (int e = 0; e <= 2; e++)
 		{
 			//asigns each number to its respective color
@@ -1456,13 +1277,13 @@ void print(int cube[6][3][3])
 			else if (cube[0][i][e] >= 27 and cube[0][i][e] <= 35) color = 6;
 			else if (cube[0][i][e] >= 36 and cube[0][i][e] <= 44) color = 7;
 			else if (cube[0][i][e] >= 45 and cube[0][i][e] <= 53) color = 5;
-			if (cube[0][i][e] < 9) cout << colors[3] << "0";
-			else if (cube[0][i][e] == 9) cout << colors[4] << "0";
-			cout << colors[color] << cube[0][i][e] << " " << RESET;
+			if (cube[0][i][e] < 9) std::cout << colors[3] << "0";
+			else if (cube[0][i][e] == 9) std::cout << colors[4] << "0";
+			std::cout << colors[color] << cube[0][i][e] << " " << RESET;
 		}
-		cout << endl;
+		std::cout << std::endl;
 	}
-	cout << endl;
+	std::cout << std::endl;
 	for (int j = 0; j <= 2; j++)
 	{
 		for (int q = 1; q <= 4; q++)
@@ -1481,16 +1302,16 @@ void print(int cube[6][3][3])
 				else if (cube[q][j][p] >= 27 and cube[q][j][p] <= 35) color = 6;
 				else if (cube[q][j][p] >= 36 and cube[q][j][p] <= 44) color = 7;
 				else if (cube[q][j][p] >= 45 and cube[q][j][p] <= 53) color = 5;
-				if (cube[q][j][p] < 10) cout << colors[color] << "0";
-				cout << colors[color] << cube[q][j][p] << " " << RESET;
+				if (cube[q][j][p] < 10) std::cout << colors[color] << "0";
+				std::cout << colors[color] << cube[q][j][p] << " " << RESET;
 			}
 		}
-		cout << endl;
+		std::cout << std::endl;
 	}
-	cout << endl;
+	std::cout << std::endl;
 	for (int k = 0; k <= 2; k++)
 	{
-		cout << "         ";
+		std::cout << "         ";
 		for (int a = 0; a <= 2; a++)
 		{
 			if (cube[5][k][a] >= 0 and cube[5][k][a] <= 8) color = 3;
@@ -1499,9 +1320,9 @@ void print(int cube[6][3][3])
 			else if (cube[5][k][a] >= 27 and cube[5][k][a] <= 35) color = 6;
 			else if (cube[5][k][a] >= 36 and cube[5][k][a] <= 44) color = 7;
 			else if (cube[5][k][a] >= 45 and cube[5][k][a] <= 53) color = 5;
-			if (cube[5][k][a] < 10) cout << colors[color] << "0";
-			cout << colors[color] << cube[5][k][a] << " " << RESET;
+			if (cube[5][k][a] < 10) std::cout << colors[color] << "0";
+			std::cout << colors[color] << cube[5][k][a] << " " << RESET;
 		}
-		cout << endl;
+		std::cout << std::endl;
 	}
 }
