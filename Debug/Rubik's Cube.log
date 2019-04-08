@@ -1,0 +1,6 @@
+﻿  RubiksCube.cpp
+c:\users\shadow\desktop\rubik's cube\rubik's cube\rubikscube.cpp(551): warning C4101: 'count': unreferenced local variable
+c:\users\shadow\desktop\rubik's cube\rubik's cube\rubikscube.cpp(916): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
+c:\users\shadow\desktop\rubik's cube\rubik's cube\rubikscube.cpp(193): warning C4715: 'check_color': not all control paths return a value
+c:\users\shadow\desktop\rubik's cube\rubik's cube\rubikscube.cpp(183): warning C4715: 'check_color': not all control paths return a value
+  Rubik's Cube.vcxproj -> C:\Users\Shadow\Desktop\Rubik's Cube\Debug\Rubik's Cube.exe
