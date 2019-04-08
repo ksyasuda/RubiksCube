@@ -5,8 +5,10 @@
 #include <time.h>
 #include <sstream>
 #include <fstream>
-
-
+#include "Cube.h"
+//#include <string.h>
+#include <cstring>
+//#include <stdio.h>
 
 #define RESET "\033[0m"
 #define RED "\033[31m"
@@ -19,74 +21,12 @@
 
 using namespace std::chrono;
 
-void print(int cube[6][3][3]);
-
-void F(int cube[6][3][3]);
-
-void Fp(int cube [6][3][3]);
-
-void L(int cube[6][3][3]);
-
-void Lp(int cube[6][3][3]);
-
-void R(int cube[6][3][3]);
-
-void Rp(int cube[6][3][3]);
-
-void U(int cube[6][3][3]);
-
-void Up(int cube[6][3][3]);
-
-void D(int cube[6][3][3]);
-
-void Dp(int cube[6][3][3]);
-
-void B(int cube[6][3][3]);
-
-void Bp(int cube[6][3][3]);
-
-std::string random_scramble(int cube[6][3][3], int scramble_size, std::ofstream& os);
-
-void load_scramble(int cube[6][3][3], std::ifstream& ins);
-
-void turn_cube(int cube[6][3][3], std::string temp, bool yeah);
-
-int menu(int choice);
-
-bool is_solved(int cube[6][3][3]);
-
-void play(int cube[6][3][3]);
-
-bool valid_move(std::string move);
-
-void solver(int cube[6][3][3]);
-
-void cross(int cube[6][3][3]);
-
-void second_layer(int cube[6][3][3]);
-
-void corners(int cube[6][3][3]);
-
-void delay();
-
-bool second_layer_correct(int cube[6][3][3]);
-
-void top_cross(int cube[6][3][3]);
-
-std::string check_color(int * ptr);
-
-void pll(int cube[6][3][3]);
-
-void oll(int cube[6][3][3]);
-
-bool top_correct(int cube[6][3][3]);
-
-void cheeky_ai(int cube[6][3][3], std::string r_scramble, std::ofstream& os, std::ifstream& is);
-
-void cube_with_pair(int cube[6][3][3])
-{
-
-}
+const int num_solves = 500000;
+const bool cfop_delay = false;
+const bool turn_delay = false;
+const bool print_cube = false;
+const bool show_moves = false;
+const bool debug = true;
 
 
 int main()
@@ -108,65 +48,117 @@ int main()
 			}
 		}
 	}
-	solver(cube);
-	do 
+	if(debug)
+		solver_debug(cube);
+	else
 	{
-		choice = menu(choice);
-		int turns;
-		if (choice == 1)
+		do
 		{
-			std::cout << "How many turns in the scramble?: ";
-			std::cin >> turns;
-			reverse_scramble = random_scramble(cube, turns, os);
-			print(cube);
-		}
-		else if (choice == 2)
-		{
-			//play game yourself
-			print(cube);
-			play(cube);
-		}
-		//load custom scramble
-		else if (choice == 3)
-		{
-			auto start = high_resolution_clock::now();
-			load_scramble(cube, is);
-			print(cube);
-			if (is_solved(cube))
+			choice = menu(choice);
+			int turns;
+			if (choice == 1)
 			{
+				std::cout << "How many turns in the scramble?: ";
+				std::cin >> turns;
+				reverse_scramble = random_scramble(cube, turns, os);
+				print(cube);
+			}
+			else if (choice == 2)
+			{
+				//play game yourself
+				print(cube);
+				auto start = high_resolution_clock::now();
+				play(cube);
 				auto end = high_resolution_clock::now();
-				std::cout << "The Cube has been Solved" << std::endl;
-				std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
+				if (duration_cast<milliseconds>(end - start).count() < 1.0)
+					std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() < 1)
+					std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end - start).count() < 60)
+					std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() >= 60)
+					std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
+			}
+			//load custom scramble
+			else if (choice == 3)
+			{
+				auto start = high_resolution_clock::now();
+				load_scramble(cube, is);
+				print(cube);
+				if (is_solved(cube))
+				{
+					auto end = high_resolution_clock::now();
+					std::cout << "The Cube has been Solved" << std::endl;
+					if (duration_cast<milliseconds>(end - start).count() < 1.0)
+						std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
+					else if (duration_cast<seconds>(end - start).count() < 1)
+						std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
+					else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end - start).count() < 60)
+						std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
+					else if (duration_cast<seconds>(end - start).count() >= 60)
+						std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
+				}
+			}
+			//load custom solution
+			else if (choice == 4)
+			{
+				load_scramble(cube, is);
+				print(cube);
+			}
+			//ai solver
+			else if (choice == 5)
+			{
+				solver(cube);
+			}
+			else if (choice == 6)
+			{
+				auto start = high_resolution_clock::now();
+				cheeky_ai(cube, reverse_scramble, os, is);
+				if (is_solved(cube))
+				{
+					auto end = high_resolution_clock::now();
+					if (duration_cast<milliseconds>(end - start).count() < 1.0)
+						std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
+					else if (duration_cast<seconds>(end - start).count() < 1)
+						std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
+					else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end - start).count() < 60)
+						std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
+					else if (duration_cast<seconds>(end - start).count() >= 60)
+						std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
+				}
+			}
+			else if (choice == 7)
+			{
+				std::cout << "Goodbye" << std::endl;
+				return 0;
+			}
+		} while (choice != 7);
+	}
+}
+
+void cube_with_pair(int cube[6][3][3])
+{
+	//good idea but don't know if this is any better/worse
+	std::pair<std::string, std::pair<int, int>> cube2[6][3][3];
+	for (int a = 0; a < 6; a++)
+	{
+		for (int i = 0; i < 3; i++)
+		{
+			for (int j = 0; j < 3; j++)
+			{
+				std::pair<std::string, std::pair<int, int>> temp;
+				if(a == 0) temp.first = "yellow";
+				else if (a == 1) temp.first = "blue";
+				else if (a == 2) temp.first = "red";
+				else if (a == 3) temp.first = "green";
+				else if (a == 4) temp.first = "orange";
+				else if (a == 5) temp.first = "white";
+				temp.second.first = i;
+				temp.second.second = j;
+				cube2[a][i][j] = temp;
 			}
 		}
-		//load custom solution
-		else if (choice == 4)
-		{
-			load_scramble(cube, is);
-			print(cube);
-		}
-		//ai solver
-		else if (choice == 5)
-		{
-			solver(cube);
-		}
-		else if(choice == 6)
-		{
-			auto start = high_resolution_clock::now();
-			cheeky_ai(cube, reverse_scramble, os, is);
-			if (is_solved(cube))
-			{
-				auto end = high_resolution_clock::now();
-				std::cout << "The Cube has been Solved" << std::endl;
-				std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end-start).count() << " milliseconds)" << std::endl;
-			}
-		}
-		else if (choice == 7)
-		{
-			std::cout << "Goodbye" << std::endl;
-			return 0;
-		}
-	} while (choice != 7);
+	}
 }
 
 void cheeky_ai(int cube[6][3][3], std::string r_scramble, std::ofstream& os, std::ifstream& is)
@@ -220,13 +212,13 @@ static void auf(int cube[6][3][3])
 	}
 }
 
-void solver(int cube[6][3][3])
+void solver_debug(int cube[6][3][3])
 {
 	//cross
 	//need to implement while loop to keep running function till the cross is made
 	//implement a thing that writes the moves the ai does to solve the cube to a file with sstream (ofstream)
 	int numRight = 0, numWrong = 0;
-	int num_solves = 200;
+	int literallyWhat = 0;
 	std::ofstream os;
 	for (int e = 0; e < num_solves; e++)
 	{
@@ -235,29 +227,40 @@ void solver(int cube[6][3][3])
 		do {
 			cross(cube);
 		} while (!(check_color(cube, 5, 0, 1) == "white" and check_color(cube, 5, 1, 0) == "white" and check_color(cube, 5, 1, 2) == "white" and check_color(cube, 5, 2, 1) == "white"));
-		delay();
+		if (cfop_delay)
+			delay();
 		corners(cube);
-		delay();
+		if (cfop_delay)
+			delay();
 		do { second_layer(cube); } while (!second_layer_correct(cube));
-		delay();
+		if (cfop_delay)
+			delay();
 		top_cross(cube);
-		delay();
+		if (cfop_delay)
+			delay();
 		do { oll(cube); } while (!top_correct(cube));
-		delay();
+		if (cfop_delay)
+			delay();
 		//pll skip
-		if ((top_layer_right(cube) and !is_solved(cube)) or is_solved(cube)) 
+		if ((top_layer_right(cube) and !is_solved(cube)) or is_solved(cube))
 		{
-			auf(cube); 
+			auf(cube);
 			if (is_solved(cube)) {
 				auto end = high_resolution_clock::now();
 				std::cout << "The Cube has been Solved" << std::endl;
 				std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds" << std::endl;
 				++numRight;
-				delay();
+				if (cfop_delay)
+					delay();
 				continue;
 			}
 			else
+			{
 				std::cout << "Literally no idea... this option should never output" << std::endl;
+				literallyWhat++;
+				if (cfop_delay)
+					delay();
+			}
 		}
 		//split into two parts
 		//part one get headlights on f l and r faces and full bar on the b face
@@ -268,23 +271,129 @@ void solver(int cube[6][3][3])
 		if (is_solved(cube)) {
 			auto end = high_resolution_clock::now();
 			std::cout << "The Cube has been Solved" << std::endl;
-			std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end-start).count() << " milliseconds)" << std::endl;
+			if (duration_cast<milliseconds>(end - start).count() < 1.0)
+				std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
+			else if (duration_cast<seconds>(end - start).count() < 1)
+				std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
+			else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end - start).count() < 60)
+				std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
+			else if (duration_cast<seconds>(end - start).count() >= 60)
+				std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
 			++numRight;
-			delay();
+			if (cfop_delay)
+				delay();
 		}
 		else
 		{
 			auto end = high_resolution_clock::now();
 			std::cout << "Not solved and idk what to do to solve it" << std::endl;
-			std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
+			if (duration_cast<milliseconds>(end - start).count() < 1.0)
+				std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
+			else if (duration_cast<seconds>(end - start).count() < 1)
+				std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
+			else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end - start).count() < 60)
+				std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
+			else if (duration_cast<seconds>(end - start).count() >= 60)
+				std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
 			++numWrong;
-			delay();
+			if (cfop_delay)
+				delay();
 		}
 	}
 	std::cout << "Testing complete: " << num_solves << " solves" << std::endl;
+	if (literallyWhat > 0)
+	{
+		std::cout << "Number of errors that defy the laws of physics and Rubik's Cubes: " << literallyWhat << "\n";
+	}
 	std::cout << "Number of correct solves: " << numRight << std::endl;
 	std::cout << "Number of incorrect solves: " << numWrong << std::endl;
-	std::cout << "Percent corect = " << numRight << " / " << num_solves << " = " << (double)numRight / (double)num_solves;
+	std::cout << "Percent corect = " << numRight << " / " << num_solves << " = " << (double)numRight / (double)num_solves << "%\n";
+}
+
+void solver(int cube[6][3][3])
+{
+	//cross
+	//need to implement while loop to keep running function till the cross is made
+	//implement a thing that writes the moves the ai does to solve the cube to a file with sstream (ofstream)
+	int numRight = 0, numWrong = 0;
+	int literallyWhat = 0;
+	std::ofstream os;
+	random_scramble(cube, 25, os);
+	auto start = high_resolution_clock::now();
+	do {
+		cross(cube);
+	} while (!(check_color(cube, 5, 0, 1) == "white" and check_color(cube, 5, 1, 0) == "white" and check_color(cube, 5, 1, 2) == "white" and check_color(cube, 5, 2, 1) == "white"));
+	if(cfop_delay)
+		delay();
+	corners(cube);
+	if(cfop_delay)
+		delay();
+	do { second_layer(cube); } while (!second_layer_correct(cube));
+	if(cfop_delay)
+		delay();
+	top_cross(cube);
+	if (cfop_delay)
+		delay();
+	do { oll(cube); } while (!top_correct(cube));
+	if (cfop_delay)
+		delay();
+	//pll skip
+	if ((top_layer_right(cube) and !is_solved(cube)) or is_solved(cube)) 
+	{
+		auf(cube); 
+		if (is_solved(cube)) {
+			auto end = high_resolution_clock::now();
+			std::cout << "The Cube has been Solved" << std::endl;
+			std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds" << std::endl;
+			++numRight;
+			if (cfop_delay)
+				delay();
+		}
+		else
+		{
+			std::cout << "Literally no idea... this option should never output" << std::endl;
+			literallyWhat++;
+			if (cfop_delay)
+				delay();
+		}
+	}
+	//split into two parts
+	//part one get headlights on f l and r faces and full bar on the b face
+	//part two doing the U alg either once or twice as needed
+	//also need to account for if there is an H perm situation
+	pll(cube);
+	if (top_layer_right(cube) and !is_solved(cube)) auf(cube);
+	if (is_solved(cube)) {
+		auto end = high_resolution_clock::now();
+		std::cout << "The Cube has been Solved" << std::endl;
+		if (duration_cast<milliseconds>(end - start).count() < 1.0)
+			std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
+		else if (duration_cast<seconds>(end - start).count() < 1)
+			std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
+		else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end-start).count() < 60)
+			std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
+		else if (duration_cast<seconds>(end - start).count() >= 60)
+			std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
+		++numRight;
+		if(cfop_delay)
+			delay();
+	}
+	else
+	{
+		auto end = high_resolution_clock::now();
+		std::cout << "Not solved and idk what to do to solve it" << std::endl;
+		if (duration_cast<milliseconds>(end - start).count() < 1.0)
+			std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
+		else if (duration_cast<seconds>(end - start).count() < 1)
+			std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
+		else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end - start).count() < 60)
+			std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
+		else if (duration_cast<seconds>(end - start).count() >= 60)
+			std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
+		++numWrong;
+		if(cfop_delay)
+			delay();
+	}
 }
 
 bool top_correct(int cube[6][3][3])
@@ -379,8 +488,12 @@ void pll(int cube[6][3][3])
 	{
 		for (int g = 0; g < 3; g++)
 		{
-			if (is_solved(cube)) { return; }
-			else if (has_bar(cube) and check_color(&cube[2][0][0]) != check_color(&cube[2][0][1]) and check_color(&cube[1][0][0]) != check_color(&cube[1][0][1]) and check_color(&cube[3][0][0]) != check_color(&cube[3][0][1]) and check_color(&cube[4][0][0]) == check_color(&cube[4][0][1])) 
+			if (is_solved(cube)) 
+			{ 
+				return; 
+			}
+			else if (has_bar(cube) and check_color(&cube[2][0][0]) != check_color(&cube[2][0][1]) and check_color(&cube[2][0][0]) == check_color(&cube[2][0][2]) and check_color(&cube[1][0][0]) != check_color(&cube[1][0][1]) and check_color(&cube[1][0][0]) == check_color(&cube[1][0][2]) and check_color(&cube[3][0][0]) != check_color(&cube[3][0][1]) and check_color(&cube[4][0][0]) == check_color(&cube[4][0][1])
+					and check_color(&cube[4][0][0]) == check_color(&cube[4][0][2]))
 			{
 				turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
 				turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
@@ -389,7 +502,8 @@ void pll(int cube[6][3][3])
 					turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
 					turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
 				}
-				delay();
+				if (cfop_delay)
+					delay();
 				return;
 			}
 			turn_cube(cube, "U", true);
@@ -426,18 +540,11 @@ void pll(int cube[6][3][3])
 			auf(cube);
 			if (is_solved(cube)) return;
 		}
-		/*
-		for (int i = 0; i < 3; i++)
-		{
-			turn_cube(cube, "U", true);
-			if (is_solved(cube)) {
-				return;
-			}
-		}
-		*/
 	}
 	//if top is z perm.  green or blue needs to be on [0][1] position on red face
 	//then u perm.  turn so block is on orange side uperm .  if not solved another u perm and auf.
+
+
 	//if no headlights just do t perm from any orientation
 	if (check_color(&cube[2][0][0]) != check_color(&cube[2][0][2]) and
 		check_color(&cube[3][0][0]) != check_color(&cube[3][0][2]) and
@@ -446,6 +553,63 @@ void pll(int cube[6][3][3])
 	{
 		turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "Rp", true); turn_cube(cube, "F", true); turn_cube(cube, "R", true);
 		turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "Rp", true); turn_cube(cube, "Fp", true);
+		//check if solved, if needs u perm, if needs h or z perm after initial t perm
+		if (is_solved(cube))
+			return;
+		else if (!is_solved(cube))
+		{
+			for (int g = 0; g < 3; g++)
+			{
+				if (is_solved(cube)) { return; }
+				else if (has_bar(cube) and check_color(&cube[2][0][0]) != check_color(&cube[2][0][1]) and check_color(&cube[2][0][0]) == check_color(&cube[2][0][2]) and check_color(&cube[1][0][0]) != check_color(&cube[1][0][1]) and check_color(&cube[1][0][0]) == check_color(&cube[1][0][2]) and check_color(&cube[3][0][0]) != check_color(&cube[3][0][1]) and check_color(&cube[4][0][0]) == check_color(&cube[4][0][1])
+					and check_color(&cube[4][0][0]) == check_color(&cube[4][0][2]))
+				{
+					turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
+					turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
+					if (check_color(&cube[1][0][0]) != check_color(&cube[1][0][1]) and
+						check_color(&cube[3][0][0]) != check_color(&cube[3][0][1])) {
+						turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
+						turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
+					}
+					if (cfop_delay)
+						delay();
+					return;
+				}
+				turn_cube(cube, "U", true);
+			}
+		}
+		//need to account for if alredy solved and ohly need u perm or ua perm
+		//if top is h perm.  do u perm u u perm up and auf
+		if (check_color(&cube[1][0][0]) == check_color(&cube[1][0][2]) and check_color(&cube[2][0][0]) == check_color(&cube[2][0][2]) and check_color(&cube[3][0][0]) == check_color(&cube[3][0][2]) and
+			check_color(&cube[4][0][0]) == check_color(&cube[4][0][2]) and check_color(&cube[2][0][1]) == check_color(&cube[4][0][0]) and check_color(&cube[4][0][1]) == check_color(&cube[2][0][0]) and !has_bar(cube))
+		{
+			turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
+			turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
+			turn_cube(cube, "U", true);
+			turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
+			turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
+			do { turn_cube(cube, "U", true); } while (!is_solved(cube));
+			return;
+		}
+		else if (check_color(&cube[1][0][0]) == check_color(&cube[1][0][2]) and check_color(&cube[2][0][0]) == check_color(&cube[2][0][2]) and check_color(&cube[3][0][0]) == check_color(&cube[3][0][2]) and
+			check_color(&cube[4][0][0]) == check_color(&cube[4][0][2]) and check_color(&cube[2][0][1]) != check_color(&cube[4][0][0]) and check_color(&cube[4][0][1]) != check_color(&cube[2][0][0]) and !has_bar(cube))
+		{
+			turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
+			turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
+			do { turn_cube(cube, "U", true); } while (check_color(&cube[4][0][0]) != check_color(&cube[4][0][1]) and check_color(&cube[4][0][2]) != check_color(&cube[4][0][1]));
+			turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
+			turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
+			if (!is_solved(cube))
+			{
+				turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
+				turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
+			}
+			if (!is_solved(cube) and top_layer_right(cube))
+			{
+				auf(cube);
+				if (is_solved(cube)) return;
+			}
+		}
 	}
 	if (check_color(&cube[2][0][0]) == check_color(&cube[2][0][2]))
 	{
@@ -462,7 +626,8 @@ void pll(int cube[6][3][3])
 	//r u rp up rp f r r up rp up r u rp fp
 	turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "Rp", true); turn_cube(cube, "F", true); turn_cube(cube, "R", true);
 	turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "Rp", true); turn_cube(cube, "Fp", true);
-	delay();
+	if (cfop_delay)
+		delay();
 	if (is_solved(cube)) 
 	{
 		return;
@@ -506,7 +671,8 @@ void pll(int cube[6][3][3])
 	else if (check_color(&cube[3][0][0]) == check_color(&cube[3][0][1]) and check_color(&cube[3][0][0]) == check_color(&cube[3][0][2])) { turn_cube(cube, "Up", true); }
 	if (check_color(&cube[4][0][0]) == check_color(&cube[4][0][1]) and check_color(&cube[4][0][0]) == check_color(&cube[4][0][2]))
 	{
-		delay();
+		if (cfop_delay)
+			delay();
 		//r up r u r u r up rp up r r
 		turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
 		turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
@@ -835,6 +1001,8 @@ bool is_solved(int cube[6][3][3])
 
 int menu(int choice)
 {
+	std::cout << std::endl;
+	std::cout << "Rubik's Cube Solver" << std::endl;
 	std::cout << "1. Randomly Scramble the Cube" << std::endl;
 	std::cout << "2. Solve the cube yourself" << std::endl;
 	std::cout << "3. Upload a custom scramble" << std::endl;
@@ -849,6 +1017,13 @@ int menu(int choice)
 		std::cin >> choice;
 	}
 	return choice;
+}
+
+//delay for turn_delay
+static void delay2()
+{
+	for (int i = 0; i < 100000; i++)
+		for (int j = 0; j < 800; j++);
 }
 
 
@@ -866,9 +1041,15 @@ void turn_cube(int cube[6][3][3], std::string temp, bool yea)
 	else if (temp == "Dp") Dp(cube);
 	else if (temp == "B") B(cube);
 	else if (temp == "Bp") Bp(cube);
-	std::cout << "One " << temp << " rotation" << std::endl;
-	if(yea) print(cube);
-	std::cout << std::endl;
+	if(show_moves)
+		std::cout << "One " << temp << " rotation" << std::endl;
+	if(turn_delay)
+		delay2();
+	if (yea and print_cube)
+	{
+		print(cube);
+		std::cout << std::endl;
+	}
 }
 
 void load_scramble(int cube[6][3][3], std::ifstream& is)

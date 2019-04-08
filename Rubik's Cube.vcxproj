@@ -156,6 +156,9 @@
   <ItemGroup>
     <ClCompile Include="RubiksCube.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\Rubik%27s Cube\Rubik%27s Cube\Cube.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
