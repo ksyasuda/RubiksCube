@@ -6,31 +6,59 @@
 #include <sstream>
 #include <fstream>
 #include "Cube.h"
-//#include <string.h>
+#include <string>
+#include <stdio.h>
 #include <cstring>
-//#include <stdio.h>
 
+using namespace std::chrono;
+
+constexpr auto RESET = "\033[0m";
+constexpr auto RED = "\033[31m";
+constexpr auto GREEN = "\033[32m";
+constexpr auto YELLOW = "\033[33m";
+constexpr auto BLUE = "\033[34m";
+constexpr auto WHITE = "\033[37m";
+constexpr auto ORANGE = "\033[91m";
+
+/*
 #define RESET "\033[0m"
 #define RED "\033[31m"
 #define GREEN "\033[32m"
 #define YELLOW "\033[33m"
 #define BLUE "\033[34m"
 #define WHITE "\033[37m"
-#define GREEN "\033[32m"
-#define ORANGE "\033[91m"
-
-using namespace std::chrono;
-
-const int num_solves = 500000;
-const bool cfop_delay = false;
-const bool turn_delay = false;
-const bool print_cube = false;
-const bool show_moves = false;
-const bool debug = true;
+#define ORANGE = "\033[91m";
+*/
 
 
-int main()
+int num_solves = 100000;
+bool cfop_delay = true;
+bool turn_delay = false;
+bool print_cube = true;
+bool show_moves = true;
+
+
+
+int main(int argc, char** argv)
 {
+	if (argc > 2)
+	{
+		std::cout << "Incorrect syntax: Usage = ./RubiksCube.exe [--debug] (--debug is optional)\n";
+		return -1;
+	}
+	if (argc == 2 and strcmp(argv[1], "--debug") != 0)
+	{
+		std::cout << "Incorrect syntax: Usage = ./RubiksCube.exe [--debug] (--debug is optional)\n";
+		return -1;
+	}
+	//to run from VS uncomment the multi-line comment around the if
+	bool debug = true;
+	///*
+	if (argc == 2 and strcmp(argv[1], "--debug") != 0)
+		debug = false;
+	else if (argc == 1)
+		debug = false;
+	//*/
 	int cube[6][3][3];
 	std::pair<std::string, int> p;
 	int count = 0, choice = 0;
@@ -48,8 +76,11 @@ int main()
 			}
 		}
 	}
-	if(debug)
+	if (debug)
+	{
+		debug_selector(num_solves, cfop_delay, turn_delay, print_cube, show_moves);
 		solver_debug(cube);
+	}
 	else
 	{
 		do
@@ -136,6 +167,26 @@ int main()
 	}
 }
 
+void debug_selector(int& num, bool& a, bool& b, bool& c, bool& d)
+{
+	int g;
+	std::cout << "----------------------------------------------------";
+	std::cout << "Debugging" << std::endl;
+	std::cout << "How many solves?: ";
+	std::cin >> g;
+	num = g;
+	std::cout << "1. CFOP DELAY: cfop_delay = true, turn_delay = false, print_cube = true, show_moves = true\n";
+	std::cout << "2. TURN DELAY: cfop_delay = false, turn_delay = true, print_cube = true, show_moves = true\n";
+	std::cout << "3. NO DELAY: cfop_delay = false, turn_delay = false, print_cube = false, show_moves = false\n";
+	std::cout << "4. Quit\n";
+	std::cin >> g;
+	if (g == 1){ a = true; b = false; c = true; d = true; }
+	else if (g == 2) { a = false; b = true; c = true; d = true; }
+	else if (g == 3) { a = false; b = false; c = false; d = false; }
+	else if (g == 4) { return; }
+	return;
+}
+
 void cube_with_pair(int cube[6][3][3])
 {
 	//good idea but don't know if this is any better/worse
@@ -220,6 +271,12 @@ void solver_debug(int cube[6][3][3])
 	int numRight = 0, numWrong = 0;
 	int literallyWhat = 0;
 	std::ofstream os;
+	os.open("Stats.txt");
+	if (!os.is_open())
+	{
+		std::cout << "Failed to open the file \n";
+		return;
+	}
 	for (int e = 0; e < num_solves; e++)
 	{
 		random_scramble(cube, 25, os);
@@ -239,9 +296,112 @@ void solver_debug(int cube[6][3][3])
 		if (cfop_delay)
 			delay();
 		do { oll(cube); } while (!top_correct(cube));
-		if (cfop_delay)
-			delay();
-		//pll skip
+		if (!is_solved(cube) and !top_layer_right(cube))
+		{
+			if (cfop_delay)
+				delay();
+			//pll skip
+			if ((top_layer_right(cube) and !is_solved(cube)) or is_solved(cube))
+			{
+				auf(cube);
+				if (is_solved(cube)) {
+					auto end = high_resolution_clock::now();
+					std::cout << "The Cube has been Solved" << std::endl;
+					std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds" << std::endl;
+					++numRight;
+					if (cfop_delay)
+						delay();
+					continue;
+				}
+				else
+				{
+					std::cout << "Literally no idea... this option should never output" << std::endl;
+					literallyWhat++;
+					if (cfop_delay)
+						delay();
+				}
+			}
+			//split into two parts
+			//part one get headlights on f l and r faces and full bar on the b face
+			//part two doing the U alg either once or twice as needed
+			//also need to account for if there is an H perm situation
+			pll(cube);
+		}
+		if (top_layer_right(cube) and !is_solved(cube)) auf(cube);
+		if (is_solved(cube)) {
+			auto end = high_resolution_clock::now();
+			std::cout << "The Cube has been Solved" << std::endl;
+			if (duration_cast<milliseconds>(end - start).count() < 1.0)
+				std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
+			else if (duration_cast<seconds>(end - start).count() < 1)
+				std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
+			else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end - start).count() < 60)
+				std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
+			else if (duration_cast<seconds>(end - start).count() >= 60)
+				std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
+			++numRight;
+			if (cfop_delay)
+				delay();
+		}
+		else
+		{
+			auto end = high_resolution_clock::now();
+			std::cout << "Not solved and idk what to do to solve it" << std::endl;
+			if (duration_cast<milliseconds>(end - start).count() < 1.0)
+				std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
+			else if (duration_cast<seconds>(end - start).count() < 1)
+				std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
+			else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end - start).count() < 60)
+				std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
+			else if (duration_cast<seconds>(end - start).count() >= 60)
+				std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
+			++numWrong;
+			if (cfop_delay)
+				delay();
+		}
+	}
+	os << "Total number of solves: " << num_solves << ", # correct solves : " << numRight << " \n# of incorrect solves: " << numWrong << "\n" << numRight << "/" << numWrong << " = " << (double)numRight / (double)numWrong << "%" << std::endl;
+	os.close();
+	std::cout << "Testing complete: " << num_solves << " solves" << std::endl;
+	if (literallyWhat > 0)
+	{
+		std::cout << "Number of errors that defy the laws of physics and Rubik's Cubes: " << literallyWhat << "\n";
+	}
+	std::cout << "Number of correct solves: " << numRight << std::endl;
+	std::cout << "Number of incorrect solves: " << numWrong << std::endl;
+	std::cout << "Percent corect = " << numRight << " / " << num_solves << " = " << (double)numRight / (double)num_solves << "%\n";
+}
+
+void solver(int cube[6][3][3])
+{
+	//cross
+	//need to implement while loop to keep running function till the cross is made
+	//implement a thing that writes the moves the ai does to solve the cube to a file with sstream (ofstream)
+	int numRight = 0, numWrong = 0;
+	int literallyWhat = 0;
+	std::ofstream os;
+	random_scramble(cube, 25, os);
+	auto start = high_resolution_clock::now();
+	do {
+		cross(cube);
+	} while (!(check_color(cube, 5, 0, 1) == "white" and check_color(cube, 5, 1, 0) == "white" and check_color(cube, 5, 1, 2) == "white" and check_color(cube, 5, 2, 1) == "white"));
+	if(cfop_delay)
+		delay();
+	corners(cube);
+	if(cfop_delay)
+		delay();
+	do { second_layer(cube); } while (!second_layer_correct(cube));
+	if(cfop_delay)
+		delay();
+	top_cross(cube);
+	if (cfop_delay)
+	delay();
+	do { oll(cube); } while (!top_correct(cube));
+	if (cfop_delay)
+		delay();
+	//check pll skip
+	if (!is_solved(cube) and !top_layer_right(cube))
+	{
 		if ((top_layer_right(cube) and !is_solved(cube)) or is_solved(cube))
 		{
 			auf(cube);
@@ -252,7 +412,6 @@ void solver_debug(int cube[6][3][3])
 				++numRight;
 				if (cfop_delay)
 					delay();
-				continue;
 			}
 			else
 			{
@@ -299,100 +458,6 @@ void solver_debug(int cube[6][3][3])
 			if (cfop_delay)
 				delay();
 		}
-	}
-	std::cout << "Testing complete: " << num_solves << " solves" << std::endl;
-	if (literallyWhat > 0)
-	{
-		std::cout << "Number of errors that defy the laws of physics and Rubik's Cubes: " << literallyWhat << "\n";
-	}
-	std::cout << "Number of correct solves: " << numRight << std::endl;
-	std::cout << "Number of incorrect solves: " << numWrong << std::endl;
-	std::cout << "Percent corect = " << numRight << " / " << num_solves << " = " << (double)numRight / (double)num_solves << "%\n";
-}
-
-void solver(int cube[6][3][3])
-{
-	//cross
-	//need to implement while loop to keep running function till the cross is made
-	//implement a thing that writes the moves the ai does to solve the cube to a file with sstream (ofstream)
-	int numRight = 0, numWrong = 0;
-	int literallyWhat = 0;
-	std::ofstream os;
-	random_scramble(cube, 25, os);
-	auto start = high_resolution_clock::now();
-	do {
-		cross(cube);
-	} while (!(check_color(cube, 5, 0, 1) == "white" and check_color(cube, 5, 1, 0) == "white" and check_color(cube, 5, 1, 2) == "white" and check_color(cube, 5, 2, 1) == "white"));
-	if(cfop_delay)
-		delay();
-	corners(cube);
-	if(cfop_delay)
-		delay();
-	do { second_layer(cube); } while (!second_layer_correct(cube));
-	if(cfop_delay)
-		delay();
-	top_cross(cube);
-	if (cfop_delay)
-		delay();
-	do { oll(cube); } while (!top_correct(cube));
-	if (cfop_delay)
-		delay();
-	//pll skip
-	if ((top_layer_right(cube) and !is_solved(cube)) or is_solved(cube)) 
-	{
-		auf(cube); 
-		if (is_solved(cube)) {
-			auto end = high_resolution_clock::now();
-			std::cout << "The Cube has been Solved" << std::endl;
-			std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds" << std::endl;
-			++numRight;
-			if (cfop_delay)
-				delay();
-		}
-		else
-		{
-			std::cout << "Literally no idea... this option should never output" << std::endl;
-			literallyWhat++;
-			if (cfop_delay)
-				delay();
-		}
-	}
-	//split into two parts
-	//part one get headlights on f l and r faces and full bar on the b face
-	//part two doing the U alg either once or twice as needed
-	//also need to account for if there is an H perm situation
-	pll(cube);
-	if (top_layer_right(cube) and !is_solved(cube)) auf(cube);
-	if (is_solved(cube)) {
-		auto end = high_resolution_clock::now();
-		std::cout << "The Cube has been Solved" << std::endl;
-		if (duration_cast<milliseconds>(end - start).count() < 1.0)
-			std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
-		else if (duration_cast<seconds>(end - start).count() < 1)
-			std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
-		else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end-start).count() < 60)
-			std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
-		else if (duration_cast<seconds>(end - start).count() >= 60)
-			std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
-		++numRight;
-		if(cfop_delay)
-			delay();
-	}
-	else
-	{
-		auto end = high_resolution_clock::now();
-		std::cout << "Not solved and idk what to do to solve it" << std::endl;
-		if (duration_cast<milliseconds>(end - start).count() < 1.0)
-			std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
-		else if (duration_cast<seconds>(end - start).count() < 1)
-			std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
-		else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end - start).count() < 60)
-			std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
-		else if (duration_cast<seconds>(end - start).count() >= 60)
-			std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
-		++numWrong;
-		if(cfop_delay)
-			delay();
 	}
 }
 
@@ -480,6 +545,68 @@ static bool has_bar(int cube[6][3][3])
 	else return false;
 }
 
+static void Ua_perm(int cube[6][3][3])
+{
+	turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
+	turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
+}
+
+static void Ub_perm(int cube[6][3][3])
+{
+	turn_cube(cube, "R", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "Rp", true);
+	turn_cube(cube, "Up", true); turn_cube(cube, "Rp", true); turn_cube(cube, "U", true); turn_cube(cube, "Rp", true);
+}
+
+static void M(int cube[6][3][3])
+{
+	int temp[3] = { cube[0][2][1], cube[0][1][1], cube[0][0][1] };
+	int temp2[3] = { cube[2][0][1], cube[2][1][1], cube[2][2][1] };
+	int temp3[3] = { cube[5][0][1], cube[5][1][1], cube[5][2][1] };
+	int temp4[3] = { cube[4][2][1], cube[4][1][1], cube[4][0][1] };
+	int count = 0;
+	for (int i = 0; i < 3; i++)
+	{
+		cube[4][i][1] = temp[count];
+		cube[0][i][1] = temp2[count];
+		cube[2][i][1] = temp3[count];
+		cube[5][i][1] = temp4[count];
+		count++;
+	}
+}
+
+static void Mp(int cube[6][3][3])
+{
+	M(cube); M(cube); M(cube);
+}
+
+static void M2(int cube[6][3][3])
+{
+	M(cube); M(cube);
+}
+
+static void H_perm(int cube[6][3][3])
+{
+	//m2 u m2 u2 m2 u m2
+	turn_cube(cube, "M2", true); turn_cube(cube, "U", true); turn_cube(cube, "M2", true);
+	turn_cube(cube, "U", true); turn_cube(cube, "U", true); turn_cube(cube, "M2", true);
+	turn_cube(cube, "U", true); turn_cube(cube, "M2", true);
+}
+
+static void Z_perm(int cube[6][3][3])
+{
+	//m2 u m2 u mp u2 m2 u2 mp u2
+	turn_cube(cube, "M2", true); turn_cube(cube, "U", true); turn_cube(cube, "M2", true);
+	turn_cube(cube, "U", true); turn_cube(cube, "Mp", true); turn_cube(cube, "U", true);
+	turn_cube(cube, "U", true); turn_cube(cube, "M2", true); turn_cube(cube, "U", true);
+	turn_cube(cube, "U", true); turn_cube(cube, "Mp", true); turn_cube(cube, "U", true); turn_cube(cube, "U", true);
+}
+
+static void T_perm(int cube[6][3][3])
+{
+	turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "Rp", true); turn_cube(cube, "F", true); turn_cube(cube, "R", true);
+	turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "Rp", true); turn_cube(cube, "Fp", true);
+}
+
 void pll(int cube[6][3][3])
 {
 	if (is_solved(cube))
@@ -488,22 +615,26 @@ void pll(int cube[6][3][3])
 	{
 		for (int g = 0; g < 3; g++)
 		{
-			if (is_solved(cube)) 
-			{ 
-				return; 
-			}
-			else if (has_bar(cube) and check_color(&cube[2][0][0]) != check_color(&cube[2][0][1]) and check_color(&cube[2][0][0]) == check_color(&cube[2][0][2]) and check_color(&cube[1][0][0]) != check_color(&cube[1][0][1]) and check_color(&cube[1][0][0]) == check_color(&cube[1][0][2]) and check_color(&cube[3][0][0]) != check_color(&cube[3][0][1]) and check_color(&cube[4][0][0]) == check_color(&cube[4][0][1])
-					and check_color(&cube[4][0][0]) == check_color(&cube[4][0][2]))
+			if (is_solved(cube))
 			{
-				turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
-				turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
-				if (check_color(&cube[1][0][0]) != check_color(&cube[1][0][1]) and
-					check_color(&cube[3][0][0]) != check_color(&cube[3][0][1])) {
-					turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
-					turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
+				return;
+			}
+			if (has_bar(cube) and check_color(&cube[2][0][0]) != check_color(&cube[2][0][1]) and check_color(&cube[2][0][0]) == check_color(&cube[2][0][2]) and check_color(&cube[1][0][0]) != check_color(&cube[1][0][1]) and check_color(&cube[1][0][0]) == check_color(&cube[1][0][2]) and check_color(&cube[3][0][0]) != check_color(&cube[3][0][1]) and check_color(&cube[4][0][0]) == check_color(&cube[4][0][1])
+				and check_color(&cube[4][0][0]) == check_color(&cube[4][0][2]))
+			{
+				if (check_color(&cube[3][0][1]) == check_color(&cube[1][0][0]) and check_color(&cube[1][0][1]) ==
+					check_color(&cube[2][0][0]))
+				{
+					if (cfop_delay)
+						delay();
+					Ua_perm(cube);
 				}
-				if (cfop_delay)
-					delay();
+				else
+				{
+					if (cfop_delay)
+						delay();
+					Ub_perm(cube);
+				}
 				return;
 			}
 			turn_cube(cube, "U", true);
@@ -514,26 +645,15 @@ void pll(int cube[6][3][3])
 	if (check_color(&cube[1][0][0]) == check_color(&cube[1][0][2]) and check_color(&cube[2][0][0]) == check_color(&cube[2][0][2]) and check_color(&cube[3][0][0]) == check_color(&cube[3][0][2]) and
 		check_color(&cube[4][0][0]) == check_color(&cube[4][0][2]) and check_color(&cube[2][0][1]) == check_color(&cube[4][0][0]) and check_color(&cube[4][0][1]) == check_color(&cube[2][0][0]) and !has_bar(cube))
 	{
-		turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
-		turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
-		turn_cube(cube, "U", true);
-		turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
-		turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
-		do { turn_cube(cube, "U", true); } while (!is_solved(cube));
-		return;
+		H_perm(cube);
 	}
 	else if (check_color(&cube[1][0][0]) == check_color(&cube[1][0][2]) and check_color(&cube[2][0][0]) == check_color(&cube[2][0][2]) and check_color(&cube[3][0][0]) == check_color(&cube[3][0][2]) and
 		check_color(&cube[4][0][0]) == check_color(&cube[4][0][2]) and check_color(&cube[2][0][1]) != check_color(&cube[4][0][0]) and check_color(&cube[4][0][1]) != check_color(&cube[2][0][0]) and !has_bar(cube))
 	{
-		turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
-		turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
-		do { turn_cube(cube, "U", true); } while (check_color(&cube[4][0][0]) != check_color(&cube[4][0][1]) and check_color(&cube[4][0][2]) != check_color(&cube[4][0][1]));
-		turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
-		turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
-		if (!is_solved(cube)) 
+		Z_perm(cube);
+		if (!is_solved(cube) and !top_layer_right(cube))
 		{
-			turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
-			turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
+			H_perm(cube);
 		}
 		if (!is_solved(cube) and top_layer_right(cube))
 		{
@@ -551,66 +671,58 @@ void pll(int cube[6][3][3])
 		check_color(&cube[4][0][0]) != check_color(&cube[4][0][2]) and
 		check_color(&cube[1][0][0]) != check_color(&cube[1][0][2]))
 	{
-		turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "Rp", true); turn_cube(cube, "F", true); turn_cube(cube, "R", true);
-		turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "Rp", true); turn_cube(cube, "Fp", true);
-		//check if solved, if needs u perm, if needs h or z perm after initial t perm
+		T_perm(cube);
+	}
+	//check if solved, if needs u perm, if needs h or z perm after initial t perm
+	if (is_solved(cube))
+		return;
+	for (int g = 0; g < 3; g++)
+	{
 		if (is_solved(cube))
-			return;
-		else if (!is_solved(cube))
 		{
-			for (int g = 0; g < 3; g++)
-			{
-				if (is_solved(cube)) { return; }
-				else if (has_bar(cube) and check_color(&cube[2][0][0]) != check_color(&cube[2][0][1]) and check_color(&cube[2][0][0]) == check_color(&cube[2][0][2]) and check_color(&cube[1][0][0]) != check_color(&cube[1][0][1]) and check_color(&cube[1][0][0]) == check_color(&cube[1][0][2]) and check_color(&cube[3][0][0]) != check_color(&cube[3][0][1]) and check_color(&cube[4][0][0]) == check_color(&cube[4][0][1])
-					and check_color(&cube[4][0][0]) == check_color(&cube[4][0][2]))
-				{
-					turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
-					turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
-					if (check_color(&cube[1][0][0]) != check_color(&cube[1][0][1]) and
-						check_color(&cube[3][0][0]) != check_color(&cube[3][0][1])) {
-						turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
-						turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
-					}
-					if (cfop_delay)
-						delay();
-					return;
-				}
-				turn_cube(cube, "U", true);
-			}
-		}
-		//need to account for if alredy solved and ohly need u perm or ua perm
-		//if top is h perm.  do u perm u u perm up and auf
-		if (check_color(&cube[1][0][0]) == check_color(&cube[1][0][2]) and check_color(&cube[2][0][0]) == check_color(&cube[2][0][2]) and check_color(&cube[3][0][0]) == check_color(&cube[3][0][2]) and
-			check_color(&cube[4][0][0]) == check_color(&cube[4][0][2]) and check_color(&cube[2][0][1]) == check_color(&cube[4][0][0]) and check_color(&cube[4][0][1]) == check_color(&cube[2][0][0]) and !has_bar(cube))
-		{
-			turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
-			turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
-			turn_cube(cube, "U", true);
-			turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
-			turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
-			do { turn_cube(cube, "U", true); } while (!is_solved(cube));
 			return;
 		}
-		else if (check_color(&cube[1][0][0]) == check_color(&cube[1][0][2]) and check_color(&cube[2][0][0]) == check_color(&cube[2][0][2]) and check_color(&cube[3][0][0]) == check_color(&cube[3][0][2]) and
-			check_color(&cube[4][0][0]) == check_color(&cube[4][0][2]) and check_color(&cube[2][0][1]) != check_color(&cube[4][0][0]) and check_color(&cube[4][0][1]) != check_color(&cube[2][0][0]) and !has_bar(cube))
+		if (has_bar(cube) and check_color(&cube[2][0][0]) != check_color(&cube[2][0][1]) and check_color(&cube[2][0][0]) == check_color(&cube[2][0][2]) and check_color(&cube[1][0][0]) != check_color(&cube[1][0][1]) and check_color(&cube[1][0][0]) == check_color(&cube[1][0][2]) and check_color(&cube[3][0][0]) != check_color(&cube[3][0][1]) and check_color(&cube[4][0][0]) == check_color(&cube[4][0][1])
+			and check_color(&cube[4][0][0]) == check_color(&cube[4][0][2]))
 		{
-			turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
-			turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
-			do { turn_cube(cube, "U", true); } while (check_color(&cube[4][0][0]) != check_color(&cube[4][0][1]) and check_color(&cube[4][0][2]) != check_color(&cube[4][0][1]));
-			turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
-			turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
-			if (!is_solved(cube))
+			if (check_color(&cube[3][0][1]) == check_color(&cube[1][0][0]) and check_color(&cube[1][0][1]) ==
+				check_color(&cube[2][0][0]))
 			{
-				turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
-				turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
+				if (cfop_delay)
+					delay();
+				Ua_perm(cube);
 			}
-			if (!is_solved(cube) and top_layer_right(cube))
+			else
 			{
-				auf(cube);
-				if (is_solved(cube)) return;
+				if (cfop_delay)
+					delay();
+				Ub_perm(cube);
 			}
+			return;
+		}
+		turn_cube(cube, "U", true);
+	}
+	if (check_color(&cube[1][0][0]) == check_color(&cube[1][0][2]) and check_color(&cube[2][0][0]) == check_color(&cube[2][0][2]) and check_color(&cube[3][0][0]) == check_color(&cube[3][0][2]) and
+		check_color(&cube[4][0][0]) == check_color(&cube[4][0][2]) and check_color(&cube[2][0][1]) == check_color(&cube[4][0][0]) and check_color(&cube[4][0][1]) == check_color(&cube[2][0][0]) and !has_bar(cube))
+	{
+		H_perm(cube);
+	}
+	else if (check_color(&cube[1][0][0]) == check_color(&cube[1][0][2]) and check_color(&cube[2][0][0]) == check_color(&cube[2][0][2]) and check_color(&cube[3][0][0]) == check_color(&cube[3][0][2]) and
+		check_color(&cube[4][0][0]) == check_color(&cube[4][0][2]) and check_color(&cube[2][0][1]) != check_color(&cube[4][0][0]) and check_color(&cube[4][0][1]) != check_color(&cube[2][0][0]) and !has_bar(cube))
+	{
+		Z_perm(cube);
+		if (!is_solved(cube) and !top_layer_right(cube))
+		{
+			H_perm(cube);
+		}
+		if (!is_solved(cube) and top_layer_right(cube))
+		{
+			auf(cube);
+			if (is_solved(cube)) return;
 		}
 	}
+	//if top is z perm.  green or blue needs to be on [0][1] position on red face
+	//then u perm.  turn so block is on orange side uperm .  if not solved another u perm and auf.
 	if (check_color(&cube[2][0][0]) == check_color(&cube[2][0][2]))
 	{
 		turn_cube(cube, "U", true);
@@ -624,11 +736,10 @@ void pll(int cube[6][3][3])
 		turn_cube(cube, "Up", true);
 	}
 	//r u rp up rp f r r up rp up r u rp fp
-	turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "Rp", true); turn_cube(cube, "F", true); turn_cube(cube, "R", true);
-	turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "Rp", true); turn_cube(cube, "Fp", true);
+	T_perm(cube);
 	if (cfop_delay)
 		delay();
-	if (is_solved(cube)) 
+	if (is_solved(cube))
 	{
 		return;
 	}
@@ -639,48 +750,44 @@ void pll(int cube[6][3][3])
 	if (check_color(&cube[1][0][0]) == check_color(&cube[1][0][2]) and check_color(&cube[2][0][0]) == check_color(&cube[2][0][2]) and check_color(&cube[3][0][0]) == check_color(&cube[3][0][2]) and
 		check_color(&cube[4][0][0]) == check_color(&cube[4][0][2]) and check_color(&cube[2][0][1]) == check_color(&cube[4][0][0]) and check_color(&cube[4][0][1]) == check_color(&cube[2][0][0]) and !has_bar(cube))
 	{
-		turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
-		turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
-		turn_cube(cube, "U", true);
-		turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
-		turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
-		if(!is_solved(cube) and top_layer_right(cube)) auf(cube);
-		return;
+		H_perm(cube);
 	}
 	else if (check_color(&cube[1][0][0]) == check_color(&cube[1][0][2]) and check_color(&cube[2][0][0]) == check_color(&cube[2][0][2]) and check_color(&cube[3][0][0]) == check_color(&cube[3][0][2]) and
 		check_color(&cube[4][0][0]) == check_color(&cube[4][0][2]) and check_color(&cube[2][0][1]) != check_color(&cube[4][0][0]) and check_color(&cube[4][0][1]) != check_color(&cube[2][0][0]) and !has_bar(cube))
 	{
-		turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
-		turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
-		do { turn_cube(cube, "U", true); } while (check_color(&cube[4][0][0]) != check_color(&cube[4][0][1]) and check_color(&cube[4][0][2]) != check_color(&cube[4][0][1]));
-		turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
-		turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
-		if (check_color(&cube[1][0][0]) != check_color(&cube[1][0][1]) and
-			check_color(&cube[2][0][0]) != check_color(&cube[2][0][1]))
+		Z_perm(cube);
+		if (!is_solved(cube) and !top_layer_right(cube))
 		{
-			turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
-			turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
+			H_perm(cube);
 		}
-		if(!is_solved(cube) and top_layer_right(cube)) auf(cube);
-		return;
+		if (!is_solved(cube) and top_layer_right(cube))
+		{
+			auf(cube);
+			if (is_solved(cube)) return;
+		}
 	}
 	if (check_color(&cube[2][0][0]) == check_color(&cube[2][0][1]) and check_color(&cube[2][0][2]) == check_color(&cube[2][0][0])) {
 		turn_cube(cube, "U", true); turn_cube(cube, "U", true);
 	}
-	else if(check_color(&cube[1][0][0]) == check_color(&cube[1][0][1]) and check_color(&cube[1][0][0]) == check_color(&cube[1][0][2])) { turn_cube(cube, "U", true); }
+	else if (check_color(&cube[1][0][0]) == check_color(&cube[1][0][1]) and check_color(&cube[1][0][0]) == check_color(&cube[1][0][2])) { turn_cube(cube, "U", true); }
 	else if (check_color(&cube[3][0][0]) == check_color(&cube[3][0][1]) and check_color(&cube[3][0][0]) == check_color(&cube[3][0][2])) { turn_cube(cube, "Up", true); }
-	if (check_color(&cube[4][0][0]) == check_color(&cube[4][0][1]) and check_color(&cube[4][0][0]) == check_color(&cube[4][0][2]))
+	if (has_bar(cube) and check_color(&cube[2][0][0]) != check_color(&cube[2][0][1]) and check_color(&cube[2][0][0]) == check_color(&cube[2][0][2]) and check_color(&cube[1][0][0]) != check_color(&cube[1][0][1]) and check_color(&cube[1][0][0]) == check_color(&cube[1][0][2]) and check_color(&cube[3][0][0]) != check_color(&cube[3][0][1]) and check_color(&cube[4][0][0]) == check_color(&cube[4][0][1])
+		and check_color(&cube[4][0][0]) == check_color(&cube[4][0][2]))
 	{
-		if (cfop_delay)
-			delay();
-		//r up r u r u r up rp up r r
-		turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
-		turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
-		if (check_color(&cube[1][0][0]) != check_color(&cube[1][0][1]) and
-			check_color(&cube[3][0][0]) != check_color(&cube[3][0][1])) {
-			turn_cube(cube, "R", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "R", true); turn_cube(cube, "Up", true);
-			turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "R", true); turn_cube(cube, "R", true);
+		if (check_color(&cube[3][0][1]) == check_color(&cube[1][0][0]) and check_color(&cube[1][0][1]) ==
+			check_color(&cube[2][0][0]))
+		{
+			if (cfop_delay)
+				delay();
+			Ua_perm(cube);
 		}
+		else
+		{
+			if (cfop_delay)
+				delay();
+			Ub_perm(cube);
+		}
+		return;
 	}
 }
 
@@ -720,7 +827,6 @@ void top_cross(int cube[6][3][3])
 		turn_cube(cube, "F", true); turn_cube(cube, "R", true); turn_cube(cube, "U", true); turn_cube(cube, "Rp", true); turn_cube(cube, "Up", true); turn_cube(cube, "Fp", true);
 		//f r u rp up fp
 	}
-	
 }
 
 bool second_layer_correct(int cube[6][3][3])
@@ -1001,6 +1107,7 @@ bool is_solved(int cube[6][3][3])
 
 int menu(int choice)
 {
+	//add a debug menu
 	std::cout << std::endl;
 	std::cout << "Rubik's Cube Solver" << std::endl;
 	std::cout << "1. Randomly Scramble the Cube" << std::endl;
@@ -1008,7 +1115,7 @@ int menu(int choice)
 	std::cout << "3. Upload a custom scramble" << std::endl;
 	std::cout << "4. Load a custom solution " << std::endl;
 	std::cout << "5. Ai cube solve" << std::endl;
-	std::cout << "6. cheecky Ai cube solve" << std::endl;
+	std::cout << "6. Cheeky Ai cube solve" << std::endl;
 	std::cout << "7. Quit" << std::endl;
 	std::cout << "Enter in a choice: "; std::cin >> choice;
 	while (choice != 1 and choice != 2 and choice != 3 and choice != 4 and choice != 5 and choice != 6 and choice != 7) {
@@ -1041,6 +1148,9 @@ void turn_cube(int cube[6][3][3], std::string temp, bool yea)
 	else if (temp == "Dp") Dp(cube);
 	else if (temp == "B") B(cube);
 	else if (temp == "Bp") Bp(cube);
+	else if (temp == "M") M(cube);
+	else if (temp == "Mp") Mp(cube);
+	else if (temp == "M2") M2(cube);
 	if(show_moves)
 		std::cout << "One " << temp << " rotation" << std::endl;
 	if(turn_delay)
@@ -1443,7 +1553,7 @@ void F(int cube[6][3][3])
 //fuck this shit!
 void print(int cube[6][3][3])
 {
-	const char* colors[8] = { RESET, RED, GREEN, YELLOW, BLUE, WHITE, GREEN, ORANGE };
+	const char* colors[7] = { RESET, RED, GREEN, YELLOW, BLUE, WHITE, ORANGE };
 	int color = 0;
 	//YELLOW FACE
 	for (int i = 0; i <= 2; i++)
@@ -1455,8 +1565,8 @@ void print(int cube[6][3][3])
 			if (cube[0][i][e] >= 0 and cube[0][i][e] <= 8) color = 3;
 			else if (cube[0][i][e] >= 9 and cube[0][i][e] <= 17) color = 4;
 			else if (cube[0][i][e] >= 18 and cube[0][i][e] <= 26) color = 1;
-			else if (cube[0][i][e] >= 27 and cube[0][i][e] <= 35) color = 6;
-			else if (cube[0][i][e] >= 36 and cube[0][i][e] <= 44) color = 7;
+			else if (cube[0][i][e] >= 27 and cube[0][i][e] <= 35) color = 2;
+			else if (cube[0][i][e] >= 36 and cube[0][i][e] <= 44) color = 6;
 			else if (cube[0][i][e] >= 45 and cube[0][i][e] <= 53) color = 5;
 			if (cube[0][i][e] < 9) std::cout << colors[3] << "0";
 			else if (cube[0][i][e] == 9) std::cout << colors[4] << "0";
@@ -1480,8 +1590,8 @@ void print(int cube[6][3][3])
 				if (cube[q][j][p] >= 0 and cube[q][j][p] <= 8) color = 3;
 				else if (cube[q][j][p] >= 9 and cube[q][j][p] <= 17) color = 4;
 				else if (cube[q][j][p] >= 18 and cube[q][j][p] <= 26) color = 1;
-				else if (cube[q][j][p] >= 27 and cube[q][j][p] <= 35) color = 6;
-				else if (cube[q][j][p] >= 36 and cube[q][j][p] <= 44) color = 7;
+				else if (cube[q][j][p] >= 27 and cube[q][j][p] <= 35) color = 2;
+				else if (cube[q][j][p] >= 36 and cube[q][j][p] <= 44) color = 6;
 				else if (cube[q][j][p] >= 45 and cube[q][j][p] <= 53) color = 5;
 				if (cube[q][j][p] < 10) std::cout << colors[color] << "0";
 				std::cout << colors[color] << cube[q][j][p] << " " << RESET;
@@ -1498,8 +1608,8 @@ void print(int cube[6][3][3])
 			if (cube[5][k][a] >= 0 and cube[5][k][a] <= 8) color = 3;
 			else if (cube[5][k][a] >= 9 and cube[5][k][a] <= 17) color = 4;
 			else if (cube[5][k][a] >= 18 and cube[5][k][a] <= 26) color = 1;
-			else if (cube[5][k][a] >= 27 and cube[5][k][a] <= 35) color = 6;
-			else if (cube[5][k][a] >= 36 and cube[5][k][a] <= 44) color = 7;
+			else if (cube[5][k][a] >= 27 and cube[5][k][a] <= 35) color = 2;
+			else if (cube[5][k][a] >= 36 and cube[5][k][a] <= 44) color = 6;
 			else if (cube[5][k][a] >= 45 and cube[5][k][a] <= 53) color = 5;
 			if (cube[5][k][a] < 10) std::cout << colors[color] << "0";
 			std::cout << colors[color] << cube[5][k][a] << " " << RESET;

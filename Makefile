@@ -21,4 +21,4 @@ sync :
   --exclude '.git*' \
   --filter=':- .gitignore' \
   ./ \
-  ksyasuda@login.engin.umich.edu:RubiksCube/
+  ksyasuda@login.engin.umich.edu:Test/RubiksCube/
