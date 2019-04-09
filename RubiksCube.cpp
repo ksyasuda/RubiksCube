@@ -78,8 +78,12 @@ int main(int argc, char** argv)
 	}
 	if (debug)
 	{
-		debug_selector(num_solves, cfop_delay, turn_delay, print_cube, show_moves);
-		solver_debug(cube);
+		int result;
+		result = debug_selector(num_solves, cfop_delay, turn_delay, print_cube, show_moves);
+		if (result != -1 and result != 0)
+			solver_debug(cube);
+		else
+			std::cout << "IDK you did something wrong " << std::endl;
 	}
 	else
 	{
@@ -167,7 +171,7 @@ int main(int argc, char** argv)
 	}
 }
 
-void debug_selector(int& num, bool& a, bool& b, bool& c, bool& d)
+int debug_selector(int& num, bool& a, bool& b, bool& c, bool& d)
 {
 	int g;
 	std::cout << "----------------------------------------------------";
@@ -180,11 +184,11 @@ void debug_selector(int& num, bool& a, bool& b, bool& c, bool& d)
 	std::cout << "3. NO DELAY: cfop_delay = false, turn_delay = false, print_cube = false, show_moves = false\n";
 	std::cout << "4. Quit\n";
 	std::cin >> g;
-	if (g == 1){ a = true; b = false; c = true; d = true; }
-	else if (g == 2) { a = false; b = true; c = true; d = true; }
-	else if (g == 3) { a = false; b = false; c = false; d = false; }
-	else if (g == 4) { return; }
-	return;
+	if (g == 1) { a = true; b = false; c = true; d = true; return 1; }
+	else if (g == 2) { a = false; b = true; c = true; d = true; return 1; }
+	else if (g == 3) { a = false; b = false; c = false; d = false; return 1; }
+	else if (g == 4) { return -1; }
+	return 0;
 }
 
 void cube_with_pair(int cube[6][3][3])
@@ -270,6 +274,7 @@ void solver_debug(int cube[6][3][3])
 	//implement a thing that writes the moves the ai does to solve the cube to a file with sstream (ofstream)
 	int numRight = 0, numWrong = 0;
 	int literallyWhat = 0;
+	std::ofstream oss;
 	std::ofstream os;
 	os.open("Stats.txt");
 	if (!os.is_open())
@@ -277,26 +282,142 @@ void solver_debug(int cube[6][3][3])
 		std::cout << "Failed to open the file \n";
 		return;
 	}
+	auto start2 = high_resolution_clock::now();
 	for (int e = 0; e < num_solves; e++)
 	{
-		random_scramble(cube, 25, os);
+		random_scramble(cube, 25, oss);
 		auto start = high_resolution_clock::now();
+		if (is_solved(cube)) {
+			auto end = high_resolution_clock::now();
+			std::cout << "The Cube has been Solved" << std::endl;
+			if (turn_delay or cfop_delay)
+			{
+				if (duration_cast<milliseconds>(end - start).count() < 1.0)
+					std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() < 1)
+					std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end - start).count() < 60)
+					std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() >= 60)
+					std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
+			}
+			++numRight;
+			if (cfop_delay)
+				delay();
+			continue;
+		}
 		do {
 			cross(cube);
 		} while (!(check_color(cube, 5, 0, 1) == "white" and check_color(cube, 5, 1, 0) == "white" and check_color(cube, 5, 1, 2) == "white" and check_color(cube, 5, 2, 1) == "white"));
+		if (is_solved(cube)) {
+			auto end = high_resolution_clock::now();
+			std::cout << "The Cube has been Solved" << std::endl;
+			if (turn_delay or cfop_delay)
+			{
+				if (duration_cast<milliseconds>(end - start).count() < 1.0)
+					std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() < 1)
+					std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end - start).count() < 60)
+					std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() >= 60)
+					std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
+			}
+			++numRight;
+			if (cfop_delay)
+				delay();
+			continue;
+		}
 		if (cfop_delay)
 			delay();
 		corners(cube);
+		//it's bound to happen in 1 million runs
+		if (is_solved(cube)) {
+			auto end = high_resolution_clock::now();
+			std::cout << "The Cube has been Solved" << std::endl;
+			if (turn_delay or cfop_delay)
+			{
+				if (duration_cast<milliseconds>(end - start).count() < 1.0)
+					std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() < 1)
+					std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end - start).count() < 60)
+					std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() >= 60)
+					std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
+			}
+			++numRight;
+			if (cfop_delay)
+				delay();
+			continue;
+		}
 		if (cfop_delay)
 			delay();
 		do { second_layer(cube); } while (!second_layer_correct(cube));
+		if (is_solved(cube)) {
+			auto end = high_resolution_clock::now();
+			std::cout << "The Cube has been Solved" << std::endl;
+			if (turn_delay or cfop_delay)
+			{
+				if (duration_cast<milliseconds>(end - start).count() < 1.0)
+					std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() < 1)
+					std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end - start).count() < 60)
+					std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() >= 60)
+					std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
+			}
+			++numRight;
+			if (cfop_delay)
+				delay();
+			continue;
+		}
 		if (cfop_delay)
 			delay();
 		top_cross(cube);
+		if (is_solved(cube)) {
+			auto end = high_resolution_clock::now();
+			std::cout << "The Cube has been Solved" << std::endl;
+			if (turn_delay or cfop_delay)
+			{
+				if (duration_cast<milliseconds>(end - start).count() < 1.0)
+					std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() < 1)
+					std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end - start).count() < 60)
+					std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() >= 60)
+					std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
+			}
+			++numRight;
+			if (cfop_delay)
+				delay();
+			continue;
+		}
 		if (cfop_delay)
 			delay();
 		do { oll(cube); } while (!top_correct(cube));
-		if (!is_solved(cube) and !top_layer_right(cube))
+		if (is_solved(cube)) {
+			auto end = high_resolution_clock::now();
+			std::cout << "The Cube has been Solved" << std::endl;
+			if (turn_delay or cfop_delay)
+			{
+				if (duration_cast<milliseconds>(end - start).count() < 1.0)
+					std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() < 1)
+					std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end - start).count() < 60)
+					std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() >= 60)
+					std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
+			}
+			++numRight;
+			if (cfop_delay)
+				delay();
+			continue;
+		}
+		else if (!is_solved(cube) and !top_layer_right(cube))
 		{
 			if (cfop_delay)
 				delay();
@@ -307,7 +428,17 @@ void solver_debug(int cube[6][3][3])
 				if (is_solved(cube)) {
 					auto end = high_resolution_clock::now();
 					std::cout << "The Cube has been Solved" << std::endl;
-					std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds" << std::endl;
+					if (turn_delay or cfop_delay)
+					{
+						if (duration_cast<milliseconds>(end - start).count() < 1.0)
+							std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
+						else if (duration_cast<seconds>(end - start).count() < 1)
+							std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
+						else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end - start).count() < 60)
+							std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
+						else if (duration_cast<seconds>(end - start).count() >= 60)
+							std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
+					}
 					++numRight;
 					if (cfop_delay)
 						delay();
@@ -319,6 +450,7 @@ void solver_debug(int cube[6][3][3])
 					literallyWhat++;
 					if (cfop_delay)
 						delay();
+					continue;
 				}
 			}
 			//split into two parts
@@ -331,45 +463,63 @@ void solver_debug(int cube[6][3][3])
 		if (is_solved(cube)) {
 			auto end = high_resolution_clock::now();
 			std::cout << "The Cube has been Solved" << std::endl;
-			if (duration_cast<milliseconds>(end - start).count() < 1.0)
-				std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
-			else if (duration_cast<seconds>(end - start).count() < 1)
-				std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
-			else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end - start).count() < 60)
-				std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
-			else if (duration_cast<seconds>(end - start).count() >= 60)
-				std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
+			if (turn_delay or cfop_delay)
+			{
+				if (duration_cast<milliseconds>(end - start).count() < 1.0)
+					std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() < 1)
+					std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end - start).count() < 60)
+					std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() >= 60)
+					std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
+			}
 			++numRight;
 			if (cfop_delay)
 				delay();
+			continue;
 		}
 		else
 		{
 			auto end = high_resolution_clock::now();
 			std::cout << "Not solved and idk what to do to solve it" << std::endl;
-			if (duration_cast<milliseconds>(end - start).count() < 1.0)
-				std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
-			else if (duration_cast<seconds>(end - start).count() < 1)
-				std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
-			else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end - start).count() < 60)
-				std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
-			else if (duration_cast<seconds>(end - start).count() >= 60)
-				std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
+			if (turn_delay or cfop_delay)
+			{
+				if (duration_cast<milliseconds>(end - start).count() < 1.0)
+					std::cout << "Elapsed time = " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() < 1)
+					std::cout << "Elapsed time = " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() >= 1 and duration_cast<seconds>(end - start).count() < 60)
+					std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds (" << duration_cast<milliseconds>(end - start).count() << " milliseconds)" << std::endl;
+				else if (duration_cast<seconds>(end - start).count() >= 60)
+					std::cout << "Elapsed time = " << duration_cast<minutes>(end - start).count() << " minutes (" << duration_cast<seconds>(end - start).count() << " seconds)" << std::endl;
+			}
 			++numWrong;
 			if (cfop_delay)
 				delay();
 		}
 	}
-	os << "Total number of solves: " << num_solves << ", # correct solves : " << numRight << " \n# of incorrect solves: " << numWrong << "\n" << numRight << "/" << numWrong << " = " << (double)numRight / (double)numWrong << "%" << std::endl;
-	os.close();
+	auto end2 = high_resolution_clock::now();
+	os << "Total number of solves: " << num_solves << ", # correct solves: " << numRight << std::endl; 
+	os << "# of incorrect solves: " << numWrong << " " << std::endl;
+	os << numRight << " / " << numWrong << " = " << (double)numRight / (double)numWrong << "%" << std::endl;
+	std::cout << "\n";
 	std::cout << "Testing complete: " << num_solves << " solves" << std::endl;
 	if (literallyWhat > 0)
 	{
+		std::cout << "--------------------------------------------------------------------------------------" << std::endl;
 		std::cout << "Number of errors that defy the laws of physics and Rubik's Cubes: " << literallyWhat << "\n";
+		std::cout << "--------------------------------------------------------------------------------------" << std::endl;
 	}
 	std::cout << "Number of correct solves: " << numRight << std::endl;
 	std::cout << "Number of incorrect solves: " << numWrong << std::endl;
 	std::cout << "Percent corect = " << numRight << " / " << num_solves << " = " << (double)numRight / (double)num_solves << "%\n";
+	if(duration_cast<minutes>(end2-start2).count() < 1)
+		std::cout << "Total runtime = " << duration_cast<seconds>(end2 - start2).count() << " seconds" << std::endl;
+	else if (duration_cast<minutes>(end2 - start2).count() >= 1 and duration_cast<minutes>(end2-start2).count() <= 60)
+		std::cout << "Total runtime = " << duration_cast<minutes>(end2 - start2).count() << " minutes and " << (duration_cast<seconds>(end2-start2).count() - (60 * duration_cast<minutes>(end2 - start2).count())) << " seconds" << std::endl;
+	else if (duration_cast<minutes>(end2 - start2).count() > 60)
+		std::cout << "Total runtime = " << duration_cast<hours>(end2 - start2).count() << " hours" << " and " << (duration_cast<minutes>(end2-start2).count() - (60 * duration_cast<hours>(end2 - start2).count())) << " minutes" << std::endl;
 }
 
 void solver(int cube[6][3][3])
@@ -391,12 +541,39 @@ void solver(int cube[6][3][3])
 	if(cfop_delay)
 		delay();
 	do { second_layer(cube); } while (!second_layer_correct(cube));
+	if (is_solved(cube)) {
+		auto end = high_resolution_clock::now();
+		std::cout << "The Cube has been Solved" << std::endl;
+		std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds" << std::endl;
+		++numRight;
+		if (cfop_delay)
+			delay();
+		return;
+	}
 	if(cfop_delay)
 		delay();
 	top_cross(cube);
+	if (is_solved(cube)) {
+		auto end = high_resolution_clock::now();
+		std::cout << "The Cube has been Solved" << std::endl;
+		std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds" << std::endl;
+		++numRight;
+		if (cfop_delay)
+			delay();
+		return;
+	}
 	if (cfop_delay)
 	delay();
 	do { oll(cube); } while (!top_correct(cube));
+	if (is_solved(cube)) {
+		auto end = high_resolution_clock::now();
+		std::cout << "The Cube has been Solved" << std::endl;
+		std::cout << "Elapsed time = " << duration_cast<seconds>(end - start).count() << " seconds" << std::endl;
+		++numRight;
+		if (cfop_delay)
+			delay();
+		return;
+	}
 	if (cfop_delay)
 		delay();
 	//check pll skip
@@ -412,6 +589,7 @@ void solver(int cube[6][3][3])
 				++numRight;
 				if (cfop_delay)
 					delay();
+				return;
 			}
 			else
 			{
@@ -419,6 +597,7 @@ void solver(int cube[6][3][3])
 				literallyWhat++;
 				if (cfop_delay)
 					delay();
+				return;
 			}
 		}
 		//split into two parts
@@ -1244,7 +1423,8 @@ std::string random_scramble(int cube[6][3][3], int scramble_size, std::ofstream&
 		++begin;
 	}
 	os.close();
-	std::cout << "# of turns in scramble: " << scramble_size << std::endl;
+	if(turn_delay or cfop_delay)
+		std::cout << "# of turns in scramble: " << scramble_size << std::endl;
 	return reverse_scramble;
 }
 

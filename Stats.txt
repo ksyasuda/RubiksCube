@@ -1,2 +1,3 @@
-D Rp Fp D U U L Fp Fp Dp Bp F F U Up Fp B Bp U B Rp Bp Lp Dp Up 
-# of turns in scramble: 25
+Total number of solves: 100, # correct solves: 100
+# of incorrect solves: 0 
+100 / 0 = inf%

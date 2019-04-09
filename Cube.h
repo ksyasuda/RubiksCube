@@ -75,7 +75,7 @@ void cube_with_pair(int cube[6][3][3]);
 
 void solver_debug(int cube[6][3][3]);
 
-void debug_selector(int& num, bool& a, bool& b, bool& c, bool& d);
+int debug_selector(int& num, bool& a, bool& b, bool& c, bool& d);
 
 
 #endif
