@@ -12,13 +12,23 @@
 
 using namespace std::chrono;
 
+//colored numbers
+constexpr auto RED2 = "\033[31m";
+constexpr auto GREEN2 = "\033[32m";
+constexpr auto YELLOW2 = "\033[33m";
+constexpr auto BLUE2 = "\033[34m";
+constexpr auto WHITE2 = "\033[37m";
+constexpr auto ORANGE2 = "\033[91m";
+
+
+//only colors
 constexpr auto RESET = "\033[0m";
-constexpr auto RED = "\033[31m";
-constexpr auto GREEN = "\033[32m";
-constexpr auto YELLOW = "\033[33m";
-constexpr auto BLUE = "\033[34m";
-constexpr auto WHITE = "\033[37m";
-constexpr auto ORANGE = "\033[91m";
+constexpr auto RED = "\033[41m";
+constexpr auto GREEN = "\033[42m";
+constexpr auto YELLOW = "\033[43m";
+constexpr auto BLUE = "\033[44m";
+constexpr auto WHITE = "\033[47m";
+constexpr auto ORANGE = "\033[101m";
 
 /*
 #define RESET "\033[0m"
@@ -36,6 +46,7 @@ bool cfop_delay = true;
 bool turn_delay = false;
 bool print_cube = true;
 bool show_moves = true;
+bool show_colors = true;
 
 
 
@@ -1743,6 +1754,7 @@ void F(int cube[6][3][3])
 void print(int cube[6][3][3])
 {
 	const char* colors[7] = { RESET, RED, GREEN, YELLOW, BLUE, WHITE, ORANGE };
+	const char* colors2[7] = { RESET, RED2, GREEN2, YELLOW2, BLUE2, WHITE2, ORANGE2 };
 	int color = 0;
 	//YELLOW FACE
 	for (int i = 0; i <= 2; i++)
@@ -1757,9 +1769,9 @@ void print(int cube[6][3][3])
 			else if (cube[0][i][e] >= 27 and cube[0][i][e] <= 35) color = 2;
 			else if (cube[0][i][e] >= 36 and cube[0][i][e] <= 44) color = 6;
 			else if (cube[0][i][e] >= 45 and cube[0][i][e] <= 53) color = 5;
-			if (cube[0][i][e] < 9) std::cout << colors[3] << "0";
-			else if (cube[0][i][e] == 9) std::cout << colors[4] << "0";
-			std::cout << colors[color] << cube[0][i][e] << " " << RESET;
+			if (cube[0][i][e] < 9) std::cout << colors[3] << colors2[3] << "0";
+			if (cube[0][i][e] == 9) std::cout << colors[4] << colors2[4] << "0";
+			std::cout << colors[color] << colors2[color] << cube[0][i][e] << " " << RESET;
 		}
 		std::cout << std::endl;
 	}
@@ -1782,8 +1794,9 @@ void print(int cube[6][3][3])
 				else if (cube[q][j][p] >= 27 and cube[q][j][p] <= 35) color = 2;
 				else if (cube[q][j][p] >= 36 and cube[q][j][p] <= 44) color = 6;
 				else if (cube[q][j][p] >= 45 and cube[q][j][p] <= 53) color = 5;
-				if (cube[q][j][p] < 10) std::cout << colors[color] << "0";
-				std::cout << colors[color] << cube[q][j][p] << " " << RESET;
+				if (cube[q][j][p] < 10) std::cout << colors[color] << colors2[color] << "0";
+				std::cout << colors[color] << colors2[color] << cube[q][j][p] << " " << RESET;
+
 			}
 		}
 		std::cout << std::endl;
@@ -1800,8 +1813,8 @@ void print(int cube[6][3][3])
 			else if (cube[5][k][a] >= 27 and cube[5][k][a] <= 35) color = 2;
 			else if (cube[5][k][a] >= 36 and cube[5][k][a] <= 44) color = 6;
 			else if (cube[5][k][a] >= 45 and cube[5][k][a] <= 53) color = 5;
-			if (cube[5][k][a] < 10) std::cout << colors[color] << "0";
-			std::cout << colors[color] << cube[5][k][a] << " " << RESET;
+			if (cube[5][k][a] < 10) std::cout << colors[color] << colors2[color] << "0";
+			std::cout << colors[color] << colors2[color] << cube[5][k][a] << " " << RESET;
 		}
 		std::cout << std::endl;
 	}
