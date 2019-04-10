@@ -1382,13 +1382,17 @@ std::string random_scramble(int cube[6][3][3], int scramble_size, std::ofstream&
 	std::string scramble = "", temp = "";
 	std::string reverse_scramble = "";
 	std::vector<std::string> vect2;
-	os.open("test.txt");
-	if (os.is_open()) {
-		os.clear();
-	}
-	else {
-		std::cout << "Error opening file... test.txt" << std::endl;
-		return "~";
+	//will make fillle explorer use 90% of cpu without
+	if (turn_delay or cfop_delay)
+	{
+		os.open("test.txt");
+		if (os.is_open()) {
+			os.clear();
+		}
+		else {
+			std::cout << "Error opening file... test.txt" << std::endl;
+			return "~";
+		}
 	}
 	std::vector<std::string> vect = { "R", "Rp", "U", "Up", "L", "Lp", "F", "Fp", "D", "Dp", "B", "Bp" };
 	int random = 0;
@@ -1400,31 +1404,36 @@ std::string random_scramble(int cube[6][3][3], int scramble_size, std::ofstream&
 		scramble += " ";
 		vect2.insert(vect2.begin(), opp(vect.at(random)));
 	}
-	std::istringstream iss(scramble);
-	while (iss >> temp)
+	if (turn_delay or cfop_delay)
 	{
-		turn_cube(cube, temp, false);
-		os << temp << " ";
+		std::istringstream iss(scramble);
+		while (iss >> temp)
+		{
+			turn_cube(cube, temp, false);
+			os << temp << " ";
+		}
+		os << "\n# of turns in scramble: " << scramble_size << "\n";
+		os.close();
 	}
-	os << "\n# of turns in scramble: " << scramble_size << "\n";
-	os.close();
 	std::vector<std::string>::iterator begin = vect2.begin();
 	std::vector<std::string>::iterator end = vect2.end();
-	os.open("reverse_scramble.txt");
-	int counter = 0;
-	if (os.is_open())
-		os.clear();
-	while (begin != end)
+	if (turn_delay or cfop_delay)
 	{
-		reverse_scramble += *begin;
-		reverse_scramble += " ";
-		os << *begin << " ";
-		counter++;
-		++begin;
-	}
-	os.close();
-	if(turn_delay or cfop_delay)
+		os.open("reverse_scramble.txt");
+		int counter = 0;
+		if (os.is_open())
+			os.clear();
+		while (begin != end)
+		{
+			reverse_scramble += *begin;
+			reverse_scramble += " ";
+			os << *begin << " ";
+			counter++;
+			++begin;
+		}
+		os.close();
 		std::cout << "# of turns in scramble: " << scramble_size << std::endl;
+	}
 	return reverse_scramble;
 }
 
