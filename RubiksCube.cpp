@@ -524,8 +524,15 @@ void solver_debug(int cube[6][3][3])
 	}
 	std::cout << "Number of correct solves: " << numRight << std::endl;
 	std::cout << "Number of incorrect solves: " << numWrong << std::endl;
-	std::cout << "Percent corect = " << numRight << " / " << num_solves << " = " << (double)numRight / (double)num_solves << "%\n";
-	if(duration_cast<minutes>(end2-start2).count() < 1)
+	if (numRight == num_solves)
+		std::cout << "Percent correct = " << numRight << " / " << num_solves << " = " << "100%" << std::endl;
+	else
+		std::cout << "Percent corect = " << numRight << " / " << num_solves << " = " << (double)numRight / (double)num_solves << "%\n";
+	if (duration_cast<milliseconds>(end2 - start2).count() < 1)
+		std::cout << "Total runtime = " << duration_cast<microseconds>(end2 - start2).count() << " microseconds" << std::endl;
+	else if (duration_cast<seconds>(end2 - start2).count() < 1)
+		std::cout << "Total runtime = " << duration_cast<milliseconds>(end2 - start2).count() << " milliseconds" << std::endl;
+	else if(duration_cast<minutes>(end2-start2).count() < 1)
 		std::cout << "Total runtime = " << duration_cast<seconds>(end2 - start2).count() << " seconds" << std::endl;
 	else if (duration_cast<minutes>(end2 - start2).count() >= 1 and duration_cast<minutes>(end2-start2).count() <= 60)
 		std::cout << "Total runtime = " << duration_cast<minutes>(end2 - start2).count() << " minutes and " << (duration_cast<seconds>(end2-start2).count() - (60 * duration_cast<minutes>(end2 - start2).count())) << " seconds" << std::endl;
