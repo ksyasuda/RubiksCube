@@ -1771,7 +1771,7 @@ void F(int cube[6][3][3])
 	}
 }
 
-//fuck this shit!
+//butterfly this shit!
 void print(int cube[6][3][3])
 {
 	const char* colors[7] = { RESET, RED, GREEN, YELLOW, BLUE, WHITE, ORANGE };
