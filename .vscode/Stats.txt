@@ -1,0 +1,3 @@
+Total number of solves: 1, # correct solves: 1
+# of incorrect solves: 0 
+1 / 0 = inf%
