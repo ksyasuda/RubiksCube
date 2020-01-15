@@ -1,2 +1,2 @@
-U Dp Up Lp Rp 
-# of turns in scramble: 5
+Rp Up R B Rp U L B Lp B Lp Lp Rp F D Up Lp Up U Up B D D Fp D 
+# of turns in scramble: 25

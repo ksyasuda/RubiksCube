@@ -1,9 +1,9 @@
 CXX = g++
 
-CXXFLAGS = -Wall -Werror -pedantic --std=c++11 -g
+CXXFLAGS = -Wall -Werror -pedantic --std=c++11 -Wconversion -g3 -DNDEBUG
 
 	
-RubiksCube.exe: RubiksCube.cpp
+RubiksCube: RubiksCube.cpp
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
 
@@ -11,7 +11,7 @@ RubiksCube.exe: RubiksCube.cpp
 
 .PHONY: clean
 clean:
-	rm -rvf *.out *.exe *.dSYM *.stackdump
+	rm -rvf *.out *.exe *.dSYM *.stackdump RubiksCube
 	
 		# Copy files to CAEN Linux
 sync :
