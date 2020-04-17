@@ -1,24 +1,19 @@
 CXX = g++
 
-CXXFLAGS = -Wall -Werror -pedantic --std=c++11 -Wconversion -g3 -DNDEBUG
+CXXFLAGS = -Wall -Werror -Wextra -pedantic --std=c++11 -Wconversion -O3 -DNDEBUG
 
+DEBUG = -Wall -Werror -Wextra -pedantic --std=c++11 -Wconersion -g3 -DDEBUG
+
+BIN := rcube
+
+all: $(BIN)
 	
-RubiksCube: RubiksCube.cpp
+$(BIN): cube.cpp
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
 
 .SUFFIXES:
 
-.PHONY: clean
+.PHONY: clean all
 clean:
-	rm -rvf *.out *.exe *.dSYM *.stackdump RubiksCube
-	
-		# Copy files to CAEN Linux
-sync :
-	rsync \
-  -rtv \
-  --delete \
-  --exclude '.git*' \
-  --filter=':- .gitignore' \
-  ./ \
-  ksyasuda@login.engin.umich.edu:Test/RubiksCube/
+	rm -rvf *.out *.exe *.dSYM *.stackdump rcube *.txt

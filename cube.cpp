@@ -5,10 +5,10 @@
 #include <time.h>
 #include <sstream>
 #include <fstream>
-#include "Cube.h"
 #include <string>
 #include <stdio.h>
 #include <cstring>
+#include "cube.h"
 
 using namespace std::chrono;
 
@@ -160,7 +160,7 @@ int main(int argc, char** argv)
 			else if (choice == 6)
 			{
 				auto start = high_resolution_clock::now();
-				cheeky_ai(cube, reverse_scramble, os, is);
+				cheeky_ai(cube, reverse_scramble);
 				if (is_solved(cube))
 				{
 					auto end = high_resolution_clock::now();
@@ -195,8 +195,7 @@ int main(int argc, char** argv)
 int debug_selector(int& num, bool& a, bool& b, bool& c, bool& d)
 {
 	int g;
-	std::cout << "----------------------------------------------------";
-	std::cout << "Debugging" << std::endl;
+	std::cout << "----------------------------------------------------\n";
 	std::cout << "How many solves?: ";
 	std::cin >> g;
 	num = g;
@@ -212,7 +211,7 @@ int debug_selector(int& num, bool& a, bool& b, bool& c, bool& d)
 	return 0;
 }
 
-void cube_with_pair(int cube[6][3][3])
+void cube_with_pair()
 {
 	//good idea but don't know if this is any better/worse
 	std::pair<std::string, std::pair<int, int>> cube2[6][3][3];
@@ -237,7 +236,7 @@ void cube_with_pair(int cube[6][3][3])
 	}
 }
 
-void cheeky_ai(int cube[6][3][3], std::string r_scramble, std::ofstream& os, std::ifstream& is)
+void cheeky_ai(int cube[6][3][3], std::string r_scramble)
 {
 	std::string temp = "";
 	std::istringstream iss(r_scramble);
